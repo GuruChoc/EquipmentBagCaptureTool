@@ -2,13 +2,11 @@
 
 Equipment Bag Capture Tool automates screenshot capture of equipment detail popups in the MapleStory: Idle RPG PC client using AutoHotkey v2 and ShareX.
 
-It works with the equipment bag displayed as a **3-column x 4-row grid** and processes items left-to-right, top-to-bottom. It automatically moves the bag after each group of 12 items and correctly handles incomplete final screens clamped to the bottom of the list.
+It works with the equipment bag displayed as a **3-column x 4-row grid** and processes items left-to-right, top-to-bottom. It automatically moves the bag after each group of 12 items and handles incomplete final screens clamped to the bottom of the list.
 
 ## Important warning
 
 This tool sends automated mouse and keyboard input to the game client. It does not modify the game, read game memory, bypass security, or communicate with Nexon's servers directly. Automated input may still be restricted by Nexon's current rules. Check the current rules yourself before using or distributing the tool. Use is at your own risk.
-
-Do not begin with a full bag on a new setup. Run the 12-item and 36-item tests first.
 
 ## Requirements
 
@@ -51,9 +49,7 @@ winget install --id ShareX.ShareX --exact
 
 Before a real run, empty or change the destination folder so old screenshots cannot be mixed with the new batch.
 
-## 2. Get to the correct 3-column equipment bag view
-
-Before calibrating or capturing:
+## 2. Open the correct equipment-bag view
 
 1. Open MapleStory: Idle RPG.
 2. Open the **hamburger menu**.
@@ -61,7 +57,7 @@ Before calibrating or capturing:
 4. Go to **Chapter → Chapter Hunt**.
 5. Click **Edit Preset**.
 6. In the **Manage Equipment** box, click the symbol in the **bottom-right corner**.
-7. Confirm that the equipment bag is displayed as a **3-column grid**.
+7. Confirm the equipment bag is displayed as a **3-column grid**.
 8. Select the equipment category you want to capture.
 9. Put the equipment list at the absolute top.
 
@@ -69,62 +65,59 @@ The tool is designed specifically for this view.
 
 ## 3. Calibrate
 
-1. Open the correct 3-column bag view described above.
-2. Select a category containing at least **6 items**.
-3. Put the list at the absolute top.
-4. Keep the Maple window in the exact position and size you will use later.
-5. Double-click `EquipmentBagCaptureCalibration.ahk`.
-6. Follow each prompt and press `T` to record the requested point.
-7. The wizard creates `EquipmentBagCapture.ini` beside the scripts.
+Double-click `EquipmentBagCaptureCalibration.ahk` and follow the prompts.
 
-For every equipment reference point, use the **tip of the Maple glove cursor finger** and place it directly over the **dot in `Lv.`**. The `Lv.` text is a consistent landmark across equipment tiles and is easier to target repeatedly than a badge corner.
+The calibration uses one repeatable landmark throughout: place the **tip of the Maple glove cursor finger directly on the dot in `Lv.`**.
 
-Calibration records only:
+The wizard records:
 
-- glove fingertip on the dot in `Lv.` on the top-left equipment item
-- glove fingertip on the dot in `Lv.` on the top-middle equipment item
-- glove fingertip on the dot in `Lv.` on the second-row left equipment item
-- popup close button
+- top-left equipment item `Lv.` dot
+- top-middle equipment item `Lv.` dot
+- second-row left equipment item `Lv.` dot
+- `Lv.` dot inside an open equipment popup
 
-The first three `Lv.` points provide the equipment click positions and the horizontal/vertical grid spacing. The remaining grid click positions are calculated automatically from that measured spacing.
+The calibration prompts display a large bold **`Lv.`** target. Press **Enter** or click **Continue** to close each instruction window, then position the glove and press **T** to record the point.
 
-### How scrolling is calculated
+The first three points establish the horizontal and vertical grid pitch. The remaining grid positions are calculated from those measurements.
 
-The movement distance is **not manually calibrated and no correction ratio is applied**. The equipment grid itself is used as the ruler.
+The popup-close position is calculated from the popup `Lv.` landmark, so the user no longer has to manually target the popup X during calibration.
 
-The measured vertical distance from the `Lv.` dot on one row to the same `Lv.` dot on the next row is one complete **row pitch**: the item height plus the vertical gap between items.
+Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.
 
-After the fourth visible row is processed, the script calculates the next-row reference point by moving one row pitch below row 4. It then grabs the list there and drags upward exactly **four measured row pitches**, ending at the original row-1 reference position.
+## 4. Scrolling behaviour
 
-So the movement is simply:
+The mouse-down point is the calculated **row 5 / column 3 `Lv.` position**: one measured row pitch below the fourth visible row.
 
-`movement distance = 4 × measured row pitch`
+Testing showed that a geometric four-row drag was slightly short because Maple does not translate mouse travel into list movement perfectly one-for-one. On the validated setup, repeated tests found the stable sweet spot at **576 and 577 px**, alternating on successive movements:
 
-For example, if calibration measures a vertical row pitch of 140 px:
+`576, 577, 576, 577, ...`
 
-- row-5 grab point = row-1 reference + `4 × 140`
-- movement distance = `560 px`
-- drag endpoint = original row-1 reference
+This averages **576.5 px** over an even number of movements and reduces cumulative drift across long equipment bags. Calibration scales the short and long distances from the measured row pitch, using the validated 140 px reference pitch.
 
-Because the row and column pitches are measured during calibration, the same method adapts to different resolutions and scaling without using hard-coded coordinates. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
+The movement routine itself remains the proven single held drag:
 
-## 4. Mandatory test sequence
+- move to the row-5 grab point
+- mouse button down
+- stepped upward movement
+- mouse button up
+- wait 800 ms for Maple to settle
+
+At the bottom of a list Maple may elastically bounce back slightly when there is no more content to scroll. The capture tool never performs an unnecessary movement after the final batch. On an incomplete final screen it captures the new items from the bottom rows after Maple settles.
+
+## 5. Test before a full run
+
+After calibrating, use a small category first.
 
 1. Start ShareX.
-2. Double-click `EquipmentBagCaptureTool.ahk`.
-3. Read the startup message, then press `F8` to start a capture.
-4. Put the equipment list at the absolute top with no popup open.
-5. Enter `12`.
-6. Confirm exactly 12 screenshots were saved and all are unique.
-7. Reset the list to the absolute top.
-8. Press `F8` and enter `24` for a one-movement test.
-9. Confirm the next group of items aligns correctly after the single movement.
-10. Reset the list to the absolute top and run `36` before attempting a full bag.
-11. Check the screenshots for duplicates or skipped items.
+2. Start `EquipmentBagCaptureTool.ahk`.
+3. Put the equipment list at the absolute top.
+4. Press `F8` and enter `12` to confirm item clicking and ShareX capture still work.
+5. Reset the list to the absolute top.
+6. Run a multi-screen test such as `36` items and check for duplicates or skipped items.
 
-**Important:** pressing `Esc` at any time stops the current run **and closes `EquipmentBagCaptureTool.ahk` completely**. If you press `Esc`, restart `EquipmentBagCaptureTool.ahk` before trying another test or capture.
+The screenshot side uses the previously proven two-click selection and ShareX behaviour; movement now uses the verified row-5 grab point and alternating short/long drag distances.
 
-## 5. Capture a full equipment bag
+## 6. Capture a full equipment bag
 
 1. Start ShareX and confirm its save folder.
 2. Start `EquipmentBagCaptureTool.ahk`.
@@ -141,15 +134,14 @@ Press `Esc` to stop immediately. **Esc closes the AutoHotkey script completely**
 
 ## Proven capture behaviour
 
-The release uses the behaviour from the final successful `MapleRingTest.ahk` test script rather than the earlier experimental movement logic:
+The capture side retains the behaviour from the final successful `MapleRingTest.ahk` test:
 
 - each equipment item is clicked **twice**, with a pause between clicks
 - ShareX is triggered with `SendEvent "^+z"`
-- list movement uses a **single held drag**: `Click "Down"` → stepped movement → `Click "Up"`
+- list movement uses a **single held drag**
 - the script waits **800 ms after each movement** before continuing
-- the movement routine passed **60 consecutive movement tests**
 
-The successful full-bag test reported:
+The historical successful full-bag test reported:
 
 - Requested equipment items: **249**
 - Screenshot commands sent: **249**
@@ -193,24 +185,24 @@ Start ShareX before pressing `F8`.
 ### Movement is wrong
 
 - make sure the first three `Lv.` reference points were marked accurately
-- make sure the bag was at the absolute top during calibration
+- make sure the list was at the absolute top during calibration and at the start of the run
 - recalibrate after any resolution, scaling, Maple window size or position change
-- rerun the 24-item one-movement test before attempting another full bag
+- test a small multi-screen category before a full bag
 
 ### I pressed Esc and F8 no longer works
 
-`Esc` exits `EquipmentBagCaptureTool.ahk` completely. Double-click `EquipmentBagCaptureTool.ahk` again, dismiss the startup message, then press `F8` when you are ready to start another capture.
+`Esc` exits `EquipmentBagCaptureTool.ahk` completely. Double-click `EquipmentBagCaptureTool.ahk` again, dismiss the startup message, then press `F8` when ready.
 
 ### A screenshot is duplicated
 
-The game did not accept the equipment selection before ShareX captured the popup. Treat the batch as incomplete, reset the bag to the top and rerun it. The current release deliberately uses the proven two-click item-selection routine.
+The game did not accept the equipment selection before ShareX captured the popup. Treat the batch as incomplete, reset the bag to the top and rerun it. The tool deliberately uses the proven two-click item-selection routine.
 
 ## Known limitations
 
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
-- assumes the measured row pitch correctly represents one complete item-plus-gap step
+- movement distances are scaled from the validated 140 px row-pitch setup and should be tested after calibration on a substantially different layout
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment

@@ -74,7 +74,7 @@ The tool is designed specifically for this view.
 3. Put the list at the absolute top.
 4. Keep the Maple window in the exact position and size you will use later.
 5. Double-click `EquipmentBagCaptureCalibration.ahk`.
-6. Follow each prompt and press `F9` to record the requested point.
+6. Follow each prompt and press `T` to record the requested point.
 7. The wizard creates `EquipmentBagCapture.ini` beside the scripts.
 
 Calibration records:

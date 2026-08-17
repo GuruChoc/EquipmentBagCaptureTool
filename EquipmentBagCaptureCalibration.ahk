@@ -6,6 +6,14 @@ CoordMode "Mouse", "Screen"
 global APP_NAME := "Equipment Bag Capture Calibration"
 global CONFIG_FILE := A_ScriptDir . "\EquipmentBagCapture.ini"
 
+; Reference measurements from the validated 2560x1440 setup.
+global REFERENCE_X_PITCH := 131
+global REFERENCE_Y_PITCH := 140
+global POPUP_CLOSE_DX := 382
+global POPUP_CLOSE_DY := -163
+global REFERENCE_SCROLL_SHORT := 576
+global REFERENCE_SCROLL_LONG := 577
+
 SetTimer(StartCalibration, -250)
 
 Esc::ExitApp
@@ -14,48 +22,28 @@ StartCalibration()
 {
     global APP_NAME
     global CONFIG_FILE
+    global REFERENCE_X_PITCH
+    global REFERENCE_Y_PITCH
+    global POPUP_CLOSE_DX
+    global POPUP_CLOSE_DY
+    global REFERENCE_SCROLL_SHORT
+    global REFERENCE_SCROLL_LONG
 
-    answer := MsgBox(
-        "This wizard records the screen positions used by the "
-        . "Equipment Bag Capture Tool.`n`n"
-        . "Before continuing:`n"
-        . "• Open the MapleStory: Idle RPG PC client.`n"
-        . "• Open the hamburger menu → Preset.`n"
-        . "• Go to Chapter → Chapter Hunt.`n"
-        . "• Click Edit Preset.`n"
-        . "• In Manage Equipment, click the symbol in the bottom-right corner.`n"
-        . "• Confirm the equipment bag is shown in 3 columns.`n"
-        . "• Select an equipment category with at least 6 items.`n"
-        . "• Put the equipment list at the absolute top.`n"
-        . "• Keep Maple in the position and size you will use later.`n`n"
-        . "For equipment reference points, use the TIP OF THE GLOVE FINGER "
-        . "and place it directly over the DOT in 'Lv.'.`n`n"
-        . "For each point, move the mouse to the requested position "
-        . "and press T.`n`n"
-        . "Press Esc at any time to cancel. Esc closes this calibration script completely.",
-        APP_NAME,
-        "OKCancel Icon!"
-    )
+    IntroPrompt()
 
-    if answer != "OK"
-        ExitApp
-
-    topLeftRef := CapturePoint(
+    topLeftRef := CaptureLvPoint(
         "Grid reference 1 of 3",
-        "Place the TIP OF THE GLOVE FINGER directly over the DOT in 'Lv.' "
-        . "on the TOP-LEFT equipment item."
+        "TOP-LEFT equipment item"
     )
 
-    topMiddleRef := CapturePoint(
+    topMiddleRef := CaptureLvPoint(
         "Grid reference 2 of 3",
-        "Place the TIP OF THE GLOVE FINGER directly over the DOT in 'Lv.' "
-        . "on the TOP-MIDDLE equipment item."
+        "TOP-MIDDLE equipment item"
     )
 
-    secondRowLeftRef := CapturePoint(
+    secondRowLeftRef := CaptureLvPoint(
         "Grid reference 3 of 3",
-        "Place the TIP OF THE GLOVE FINGER directly over the DOT in 'Lv.' "
-        . "on the LEFT equipment item in the SECOND ROW."
+        "LEFT equipment item in the SECOND ROW"
     )
 
     xSpacing := topMiddleRef[1] - topLeftRef[1]
@@ -66,7 +54,7 @@ StartCalibration()
         MsgBox(
             "The recorded grid spacing is too small.`n`n"
             . "Run calibration again and place the glove fingertip "
-            . "directly over the requested 'Lv.' dots.",
+            . "directly on the requested Lv. dots.",
             APP_NAME
         )
         ExitApp
@@ -81,21 +69,25 @@ StartCalibration()
     gridY3 := gridY2 + ySpacing
     gridY4 := gridY3 + ySpacing
 
-    popupClose := CapturePoint(
-        "Equipment popup close button",
-        "First, manually click any equipment item so its details popup opens.`n`n"
-        . "Then place the mouse in the CENTRE of the popup's X close button."
+    PopupPrepPrompt()
+
+    popupLvRef := CaptureLvPoint(
+        "Popup reference",
+        "Lv. text INSIDE THE OPEN EQUIPMENT POPUP"
     )
 
-    ; Use the equipment grid itself as the ruler.
-    ; After row 4, move one more row pitch down to the calculated row-5
-    ; reference point, grab there, and drag upward exactly four row pitches.
-    movementDistance := ySpacing * 4
+    ; The popup-close offset is scaled from the validated reference setup.
+    popupCloseX := popupLvRef[1] + Round(POPUP_CLOSE_DX * xSpacing / REFERENCE_X_PITCH)
+    popupCloseY := popupLvRef[2] + Round(POPUP_CLOSE_DY * ySpacing / REFERENCE_Y_PITCH)
 
+    ; The verified grab point is one row pitch below row 4, column 3.
     dragStartX := gridX3
-    dragStartY := gridY1 + movementDistance
-    dragEndX := gridX3
-    dragEndY := gridY1
+    dragStartY := gridY4 + ySpacing
+
+    ; Maple scroll movement was validated over repeated tests at 576/577 px
+    ; with a 140 px row pitch. Scale those distances for other UI sizes.
+    scrollShort := Round(REFERENCE_SCROLL_SHORT * ySpacing / REFERENCE_Y_PITCH)
+    scrollLong := Round(REFERENCE_SCROLL_LONG * ySpacing / REFERENCE_Y_PITCH)
 
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
@@ -109,16 +101,22 @@ StartCalibration()
     IniWrite(gridY3, CONFIG_FILE, "Grid", "Y3")
     IniWrite(gridY4, CONFIG_FILE, "Grid", "Y4")
 
-    IniWrite(popupClose[1], CONFIG_FILE, "Popup", "CloseX")
-    IniWrite(popupClose[2], CONFIG_FILE, "Popup", "CloseY")
+    IniWrite(popupLvRef[1], CONFIG_FILE, "Popup", "LvRefX")
+    IniWrite(popupLvRef[2], CONFIG_FILE, "Popup", "LvRefY")
+    IniWrite(popupCloseX, CONFIG_FILE, "Popup", "CloseX")
+    IniWrite(popupCloseY, CONFIG_FILE, "Popup", "CloseY")
 
     IniWrite(dragStartX, CONFIG_FILE, "Movement", "StartX")
     IniWrite(dragStartY, CONFIG_FILE, "Movement", "StartY")
-    IniWrite(dragEndX, CONFIG_FILE, "Movement", "EndX")
-    IniWrite(dragEndY, CONFIG_FILE, "Movement", "EndY")
+    IniWrite(scrollShort, CONFIG_FILE, "Movement", "ShortDistance")
+    IniWrite(scrollLong, CONFIG_FILE, "Movement", "LongDistance")
     IniWrite(36, CONFIG_FILE, "Movement", "Steps")
     IniWrite(20, CONFIG_FILE, "Movement", "StepDelay")
     IniWrite(700, CONFIG_FILE, "Movement", "HoldDelay")
+
+    ; Keep legacy EndX/EndY entries for compatibility with older test tools.
+    IniWrite(dragStartX, CONFIG_FILE, "Movement", "EndX")
+    IniWrite(dragStartY - scrollShort, CONFIG_FILE, "Movement", "EndY")
 
     summary := (
         "Calibration saved successfully.`n`n"
@@ -127,18 +125,21 @@ StartCalibration()
         . gridX1 . ", " . gridX2 . ", " . gridX3 . "`n"
         . "Grid reference rows: "
         . gridY1 . ", " . gridY2 . ", "
-        . gridY3 . ", " . gridY4 . "`n"
-        . "Popup close: "
-        . popupClose[1] . ", " . popupClose[2] . "`n"
+        . gridY3 . ", " . gridY4 . "`n`n"
+        . "Popup Lv. reference: "
+        . popupLvRef[1] . ", " . popupLvRef[2] . "`n"
+        . "Calculated popup close: "
+        . popupCloseX . ", " . popupCloseY . "`n`n"
         . "Calculated row-5 grab point: "
         . dragStartX . ", " . dragStartY . "`n"
-        . "Calculated drag: "
-        . dragStartX . ", " . dragStartY
-        . " to " . dragEndX . ", " . dragEndY . "`n"
-        . "Movement distance: " . movementDistance . " px (4 measured row pitches)`n`n"
+        . "Alternating movement distances: "
+        . scrollShort . " / " . scrollLong . " px`n"
+        . "Average movement: "
+        . Round((scrollShort + scrollLong) / 2, 3) . " px`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
-        . "Run EquipmentBagCaptureTool.ahk and test one movement before a full run."
+        . "Run EquipmentBagMovementTest.ahk first if you want a scroll-only check, "
+        . "then run EquipmentBagCaptureTool.ahk."
     )
 
     A_Clipboard := summary
@@ -146,59 +147,101 @@ StartCalibration()
     MsgBox(
         summary
         . "`n`nThe summary has been copied to the clipboard."
-        . "`n`nPress Enter (or click OK) to close this window before performing any other tasks.",
+        . "`n`nPress Enter or click OK to close this calibration script.",
         APP_NAME
     )
 
     ExitApp
 }
 
-CapturePoint(pointName, instructions)
+IntroPrompt()
 {
     global APP_NAME
 
-    if InStr(instructions, "Lv.")
-    {
-        promptGui := Gui("+AlwaysOnTop", APP_NAME . " - " . pointName)
-        promptGui.MarginX := 18
-        promptGui.MarginY := 14
+    introGui := Gui("+AlwaysOnTop", APP_NAME)
+    introGui.SetFont("s11", "Segoe UI")
+    introGui.AddText("w560 Center", "Use the TIP OF THE MAPLE GLOVE FINGER on the DOT in")
+    introGui.SetFont("s30 Bold", "Segoe UI")
+    introGui.AddText("w560 Center y+2", "Lv.")
+    introGui.SetFont("s10", "Segoe UI")
+    introGui.AddText(
+        "w560 y+12",
+        "Before continuing:`n"
+        . "• Open MapleStory: Idle RPG.`n"
+        . "• Open Preset → Chapter → Chapter Hunt → Edit Preset.`n"
+        . "• Open the 3-column equipment bag.`n"
+        . "• Select a category with at least 6 items.`n"
+        . "• Put the equipment list at the absolute top.`n"
+        . "• Keep Maple in the exact position and size you will use later.`n`n"
+        . "Press Enter or click Continue."
+    )
 
-        promptGui.SetFont("s10")
-        promptGui.AddText("w520", instructions)
+    continueBtn := introGui.AddButton("Default w120 x220 y+12", "Continue")
+    continueBtn.OnEvent("Click", (*) => introGui.Destroy())
+    introGui.OnEvent("Close", (*) => ExitApp())
 
-        promptGui.SetFont("s28 Bold")
-        promptGui.AddText("Center w520 y+12", "Lv.")
+    introGui.Show("AutoSize Center")
+    WinWaitClose("ahk_id " . introGui.Hwnd)
+}
 
-        promptGui.SetFont("s10 Norm")
-        promptGui.AddText(
-            "Center w520 y+4",
-            "Put the GLOVE FINGERTIP directly on the DOT after the v."
-        )
-        promptGui.AddText(
-            "Center w520 y+12",
-            "Click OK, then press T to record the point."
-        )
+PopupPrepPrompt()
+{
+    global APP_NAME
 
-        okButton := promptGui.AddButton("Default Center w90 y+12", "OK")
-        okButton.OnEvent("Click", (*) => promptGui.Destroy())
+    prepGui := Gui("+AlwaysOnTop", APP_NAME . " - Popup reference")
+    prepGui.SetFont("s11", "Segoe UI")
+    prepGui.AddText("w540 Center", "Open any equipment popup and LEAVE IT OPEN.")
+    prepGui.AddText("w540 Center y+10", "The next point is NOT the X close button.")
+    prepGui.AddText("w540 Center y+10", "Use the same glove-fingertip landmark on")
+    prepGui.SetFont("s28 Bold", "Segoe UI")
+    prepGui.AddText("w540 Center y+2", "Lv.")
+    prepGui.SetFont("s11", "Segoe UI")
+    prepGui.AddText("w540 Center y+6", "inside the equipment popup.")
+    prepGui.AddText("w540 Center y+10", "Press Enter or click Continue.")
 
-        promptHwnd := promptGui.Hwnd
-        promptGui.Show("AutoSize Center")
-        WinWaitClose("ahk_id " . promptHwnd)
-    }
-    else
-    {
-        MsgBox(
-            instructions . "`n`n"
-            . "After closing this message, press T to record the point.",
-            APP_NAME . " - " . pointName
-        )
-    }
+    continueBtn := prepGui.AddButton("Default w120 x210 y+14", "Continue")
+    continueBtn.OnEvent("Click", (*) => prepGui.Destroy())
+    prepGui.OnEvent("Close", (*) => ExitApp())
+
+    prepGui.Show("AutoSize Center")
+    WinWaitClose("ahk_id " . prepGui.Hwnd)
+}
+
+CaptureLvPoint(pointName, targetDescription)
+{
+    global APP_NAME
+
+    instructionGui := Gui("+AlwaysOnTop", APP_NAME . " - " . pointName)
+    instructionGui.SetFont("s11", "Segoe UI")
+    instructionGui.AddText(
+        "w520 Center",
+        "Place the TIP OF THE GLOVE FINGER directly on the DOT in"
+    )
+    instructionGui.SetFont("s30 Bold", "Segoe UI")
+    instructionGui.AddText("w520 Center y+2", "Lv.")
+    instructionGui.SetFont("s11", "Segoe UI")
+    instructionGui.AddText("w520 Center y+8", targetDescription)
+    instructionGui.AddText(
+        "w520 Center y+14",
+        "Press Enter or click Continue to close this window."
+    )
+    instructionGui.AddText(
+        "w520 Center y+6",
+        "Then move the glove into position and press T."
+    )
+    instructionGui.AddText("w520 Center y+6", "Press Esc to cancel.")
+
+    continueBtn := instructionGui.AddButton("Default w120 x200 y+14", "Continue")
+    continueBtn.OnEvent("Click", (*) => instructionGui.Destroy())
+    instructionGui.OnEvent("Close", (*) => ExitApp())
+
+    instructionGui.Show("AutoSize Center")
+    WinWaitClose("ahk_id " . instructionGui.Hwnd)
 
     ToolTip(
         pointName . "`n"
-        . "Move the pointer into position and press T.`n"
-        . "Press Esc to cancel. Esc closes this calibration script completely.",
+        . targetDescription . "`n"
+        . "Put the glove fingertip on the Lv. dot and press T.",
         20,
         20
     )

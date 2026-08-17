@@ -20,8 +20,8 @@ global POPUP_CLOSE_Y := 0
 
 global DRAG_START_X := 0
 global DRAG_START_Y := 0
-global DRAG_END_X := 0
-global DRAG_END_Y := 0
+global DRAG_SHORT_DISTANCE := 576
+global DRAG_LONG_DISTANCE := 577
 global DRAG_STEPS := 36
 global STEP_DELAY := 20
 global HOLD_DELAY := 700
@@ -86,9 +86,7 @@ StartEquipmentCapture()
     }
 
     try
-    {
         LoadConfiguration()
-    }
     catch as error
     {
         MsgBox(
@@ -212,11 +210,10 @@ StartEquipmentCapture()
     while remainingItems > 0
     {
         itemsThisScreen := Min(ITEMS_PER_SCREEN, remainingItems)
-
-        ; Maple clamps an incomplete final screen to the bottom. In that
-        ; case, the new items occupy the bottom rows of the visible grid.
         startGridRow := 1
 
+        ; At the bottom Maple clamps the final incomplete screen. The new
+        ; items therefore occupy the bottom rows of the visible 4-row grid.
         if screenNumber > 1 && remainingItems < ITEMS_PER_SCREEN
         {
             rowsNeeded := Ceil(itemsThisScreen / 3)
@@ -231,6 +228,9 @@ StartEquipmentCapture()
 
         remainingItems -= itemsThisScreen
 
+        ; Never move after the final batch. A bottom-of-list elastic bounce
+        ; is harmless on the last required movement because capture resumes
+        ; only after Maple has settled.
         if remainingItems > 0
         {
             if !MoveOnce()
@@ -257,8 +257,8 @@ LoadConfiguration()
     global POPUP_CLOSE_Y
     global DRAG_START_X
     global DRAG_START_Y
-    global DRAG_END_X
-    global DRAG_END_Y
+    global DRAG_SHORT_DISTANCE
+    global DRAG_LONG_DISTANCE
     global DRAG_STEPS
     global STEP_DELAY
     global HOLD_DELAY
@@ -266,12 +266,8 @@ LoadConfiguration()
     global CALIBRATED_SCREEN_HEIGHT
 
     MAPLE_TITLE := IniRead(CONFIG_FILE, "General", "WindowTitle")
-    CALIBRATED_SCREEN_WIDTH := IniRead(
-        CONFIG_FILE, "General", "ScreenWidth"
-    ) + 0
-    CALIBRATED_SCREEN_HEIGHT := IniRead(
-        CONFIG_FILE, "General", "ScreenHeight"
-    ) + 0
+    CALIBRATED_SCREEN_WIDTH := IniRead(CONFIG_FILE, "General", "ScreenWidth") + 0
+    CALIBRATED_SCREEN_HEIGHT := IniRead(CONFIG_FILE, "General", "ScreenHeight") + 0
 
     GRID_X := [
         IniRead(CONFIG_FILE, "Grid", "X1") + 0,
@@ -291,8 +287,8 @@ LoadConfiguration()
 
     DRAG_START_X := IniRead(CONFIG_FILE, "Movement", "StartX") + 0
     DRAG_START_Y := IniRead(CONFIG_FILE, "Movement", "StartY") + 0
-    DRAG_END_X := IniRead(CONFIG_FILE, "Movement", "EndX") + 0
-    DRAG_END_Y := IniRead(CONFIG_FILE, "Movement", "EndY") + 0
+    DRAG_SHORT_DISTANCE := IniRead(CONFIG_FILE, "Movement", "ShortDistance", 576) + 0
+    DRAG_LONG_DISTANCE := IniRead(CONFIG_FILE, "Movement", "LongDistance", 577) + 0
     DRAG_STEPS := IniRead(CONFIG_FILE, "Movement", "Steps", 36) + 0
     STEP_DELAY := IniRead(CONFIG_FILE, "Movement", "StepDelay", 20) + 0
     HOLD_DELAY := IniRead(CONFIG_FILE, "Movement", "HoldDelay", 700) + 0
@@ -359,6 +355,8 @@ MoveOnce()
 {
     global APP_NAME
     global CompletedMovements
+    global DRAG_SHORT_DISTANCE
+    global DRAG_LONG_DISTANCE
 
     if !ActivateMaple()
     {
@@ -369,33 +367,40 @@ MoveOnce()
         return false
     }
 
-    PerformDrag()
+    ; Movement 1 = short, movement 2 = long, then alternate.
+    movementNumber := CompletedMovements + 1
+    movementDistance := Mod(movementNumber, 2) = 1
+        ? DRAG_SHORT_DISTANCE
+        : DRAG_LONG_DISTANCE
+
+    PerformDrag(movementDistance)
     CompletedMovements += 1
     Sleep 800
     return true
 }
 
-PerformDrag()
+PerformDrag(movementDistance)
 {
     global DRAG_START_X
     global DRAG_START_Y
-    global DRAG_END_X
-    global DRAG_END_Y
     global DRAG_STEPS
     global STEP_DELAY
     global HOLD_DELAY
 
+    endX := DRAG_START_X
+    endY := DRAG_START_Y - movementDistance
+
     ReleaseMouse()
     MouseMove(DRAG_START_X, DRAG_START_Y, 0)
-    Sleep 200
+    Sleep 500
     Click "Down"
     Sleep 250
 
     Loop DRAG_STEPS
     {
         fraction := A_Index / DRAG_STEPS
-        nextX := Round(DRAG_START_X + ((DRAG_END_X - DRAG_START_X) * fraction))
-        nextY := Round(DRAG_START_Y + ((DRAG_END_Y - DRAG_START_Y) * fraction))
+        nextX := Round(DRAG_START_X + ((endX - DRAG_START_X) * fraction))
+        nextY := Round(DRAG_START_Y + ((endY - DRAG_START_Y) * fraction))
         MouseMove(nextX, nextY, 0)
         Sleep STEP_DELAY
     }
@@ -485,9 +490,7 @@ ReleaseMouse()
 
 ReleaseKeyboard()
 {
-    SendEvent(
-        "{Ctrl up}{Shift up}{Alt up}{LWin up}{RWin up}"
-    )
+    SendEvent("{Ctrl up}{Shift up}{Alt up}{LWin up}{RWin up}")
 }
 
 ReleaseEverything()

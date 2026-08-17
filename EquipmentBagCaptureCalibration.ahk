@@ -157,11 +157,43 @@ CapturePoint(pointName, instructions)
 {
     global APP_NAME
 
-    MsgBox(
-        instructions . "`n`n"
-        . "After closing this message, press T to record the point.",
-        APP_NAME . " - " . pointName
-    )
+    if InStr(instructions, "Lv.")
+    {
+        promptGui := Gui("+AlwaysOnTop", APP_NAME . " - " . pointName)
+        promptGui.MarginX := 18
+        promptGui.MarginY := 14
+
+        promptGui.SetFont("s10")
+        promptGui.AddText("w520", instructions)
+
+        promptGui.SetFont("s28 Bold")
+        promptGui.AddText("Center w520 y+12", "Lv.")
+
+        promptGui.SetFont("s10 Norm")
+        promptGui.AddText(
+            "Center w520 y+4",
+            "Put the GLOVE FINGERTIP directly on the DOT after the v."
+        )
+        promptGui.AddText(
+            "Center w520 y+12",
+            "Click OK, then press T to record the point."
+        )
+
+        okButton := promptGui.AddButton("Default Center w90 y+12", "OK")
+        okButton.OnEvent("Click", (*) => promptGui.Destroy())
+
+        promptHwnd := promptGui.Hwnd
+        promptGui.Show("AutoSize Center")
+        WinWaitClose("ahk_id " . promptHwnd)
+    }
+    else
+    {
+        MsgBox(
+            instructions . "`n`n"
+            . "After closing this message, press T to record the point.",
+            APP_NAME . " - " . pointName
+        )
+    }
 
     ToolTip(
         pointName . "`n"

@@ -149,7 +149,9 @@ StartCalibration()
     A_Clipboard := summary
 
     MsgBox(
-        summary . "`n`nThe summary has been copied to the clipboard.",
+        summary
+        . "`n`nThe summary has been copied to the clipboard."
+        . "`n`nPress Enter (or click OK) to close this window before performing any other tasks.",
         APP_NAME
     )
 

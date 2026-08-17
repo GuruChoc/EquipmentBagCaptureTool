@@ -77,20 +77,20 @@ The tool is designed specifically for this view.
 6. Follow each prompt and press `T` to record the requested point.
 7. The wizard creates `EquipmentBagCapture.ini` beside the scripts.
 
-For all padlock reference points, aim precisely at the **keyhole**. The padlock may be red or black; its colour does not matter.
+For every equipment reference point, aim precisely at the **bottom-right corner of the tier badge**. The badge may show **T1, T2, T3 or T4** depending on the equipment; the tier value does not matter.
 
 Calibration records:
 
-- keyhole on the top-left equipment item
-- keyhole on the top-middle equipment item
-- keyhole on the second-row left equipment item
+- bottom-right corner of the tier badge on the top-left equipment item
+- bottom-right corner of the tier badge on the top-middle equipment item
+- bottom-right corner of the tier badge on the second-row left equipment item
 - popup close button
-- keyhole on the **top-right equipment tile**
-- keyhole on the **bottom-right / 15th equipment tile**
+- bottom-right corner of the tier badge on the **top-right equipment tile**
+- bottom-right corner of the tier badge on the **bottom-right / 15th equipment tile**
 
-The first three keyholes provide the equipment click positions and the horizontal/vertical grid spacing. Clicking the padlock/keyhole area from the 3-column equipment grid opens the item; the lock state itself can only be changed from the equipment details popup.
+The first three tier-badge corners provide the equipment click positions and the horizontal/vertical grid spacing. The remaining grid click positions are calculated automatically from that measured spacing.
 
-The remaining grid click positions are calculated automatically from the measured spacing. The movement calibration uses the bottom-right / 15th-item keyhole as the drag start and the top-right keyhole as the drag end, preserving the proven upward-drag routine.
+The movement calibration uses the bottom-right / 15th-item tier-badge corner as the drag start and the top-right tier-badge corner as the drag end, preserving the proven upward-drag routine.
 
 Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.
 
@@ -171,11 +171,11 @@ Start ShareX before pressing `F8`.
 - restore Maple to the calibrated position and size
 - restore the calibrated resolution/display scaling
 - rerun calibration
-- make sure the first three calibration points are placed precisely on the requested padlock keyholes
+- make sure the first three calibration points are placed precisely on the requested tier-badge corners
 
 ### Movement is wrong
 
-- recalibrate and mark the **keyholes** on the top-right and bottom-right / 15th-item padlocks accurately
+- recalibrate and mark the **bottom-right corners of the tier badges** on the top-right and bottom-right / 15th-item tiles accurately
 - make sure the bag is at the absolute top during calibration
 - rerun the 36-item test before attempting another full bag
 

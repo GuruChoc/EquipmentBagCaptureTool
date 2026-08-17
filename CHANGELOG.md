@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.1 — 2026-08-18
+
+Calibration, scrolling and usability improvements.
+
+- Reworked calibration around the consistent `Lv.` dot landmark.
+- Added large `Lv.` prompts and Enter-friendly calibration dialogs.
+- Added human-tolerant calibration using averaging and normalization around the validated 2560x1440 layout.
+- Added popup close-position calculation from the popup `Lv.` reference.
+- Uses the verified row-5 / column-3 grab point for equipment-list movement.
+- Uses alternating 576 / 577 px movement distances on the validated layout to minimise cumulative drift.
+- Added a live capture progress counter showing captured items and movement progress.
+- Preserves the proven two-click equipment selection, ShareX capture and held stepped-drag behaviour.
+- Validated with a 36-item multi-screen test and a 134-item full capture requiring 11 movements.
+- Improved handling and documentation for incomplete final screens and bottom-of-list bounce-back behaviour.
+- Updated README calibration and testing instructions.
+
 ## v1.0.0 — 2026-08-15
 
 First stable release.

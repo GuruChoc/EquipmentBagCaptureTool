@@ -84,14 +84,13 @@ Calibration records:
 - keyhole on the top-left equipment item
 - keyhole on the top-middle equipment item
 - keyhole on the second-row left equipment item
-- one safe click point inside the top-left equipment tile, used to open equipment details
 - popup close button
 - keyhole on the **top-right equipment tile**
 - keyhole on the **bottom-right / 15th equipment tile**
 
-The first three keyholes provide precise horizontal and vertical grid spacing. The separate safe click point prevents the capture script from clicking the padlocks themselves. The remaining equipment click positions are calculated automatically from that safe point and the measured spacing.
+The first three keyholes provide the equipment click positions and the horizontal/vertical grid spacing. Clicking the padlock/keyhole area from the 3-column equipment grid opens the item; the lock state itself can only be changed from the equipment details popup.
 
-The movement calibration uses the bottom-right / 15th-item keyhole as the drag start and the top-right keyhole as the drag end, preserving the proven upward-drag routine.
+The remaining grid click positions are calculated automatically from the measured spacing. The movement calibration uses the bottom-right / 15th-item keyhole as the drag start and the top-right keyhole as the drag end, preserving the proven upward-drag routine.
 
 Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.
 
@@ -172,7 +171,7 @@ Start ShareX before pressing `F8`.
 - restore Maple to the calibrated position and size
 - restore the calibrated resolution/display scaling
 - rerun calibration
-- make sure the safe top-left click point is inside the equipment tile and not on its padlock
+- make sure the first three calibration points are placed precisely on the requested padlock keyholes
 
 ### Movement is wrong
 

@@ -28,6 +28,8 @@ StartCalibration()
         . "• Select an equipment category with at least 15 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
+        . "For equipment reference points, aim at the KEYHOLE in the padlock. "
+        . "The padlock may be red or black.`n`n"
         . "For each point, move the mouse to the requested position "
         . "and press T.`n`n"
         . "Press Esc at any time to cancel.",
@@ -38,42 +40,51 @@ StartCalibration()
     if answer != "OK"
         ExitApp
 
-    topLeft := CapturePoint(
-        "Grid point 1 of 3",
-        "Place the mouse in the CENTRE of the top-left equipment item."
+    topLeftLock := CapturePoint(
+        "Grid keyhole 1 of 3",
+        "Place the mouse precisely on the KEYHOLE of the padlock "
+        . "on the TOP-LEFT equipment item."
     )
 
-    topMiddle := CapturePoint(
-        "Grid point 2 of 3",
-        "Place the mouse in the CENTRE of the top-middle equipment item."
+    topMiddleLock := CapturePoint(
+        "Grid keyhole 2 of 3",
+        "Place the mouse precisely on the KEYHOLE of the padlock "
+        . "on the TOP-MIDDLE equipment item."
     )
 
-    secondRowLeft := CapturePoint(
-        "Grid point 3 of 3",
-        "Place the mouse in the CENTRE of the left equipment item "
-        . "in the second row."
+    secondRowLeftLock := CapturePoint(
+        "Grid keyhole 3 of 3",
+        "Place the mouse precisely on the KEYHOLE of the padlock "
+        . "on the LEFT equipment item in the SECOND ROW."
     )
 
-    xSpacing := topMiddle[1] - topLeft[1]
-    ySpacing := secondRowLeft[2] - topLeft[2]
+    xSpacing := topMiddleLock[1] - topLeftLock[1]
+    ySpacing := secondRowLeftLock[2] - topLeftLock[2]
 
     if xSpacing < 40 || ySpacing < 40
     {
         MsgBox(
             "The recorded grid spacing is too small.`n`n"
-            . "Run calibration again and select the centres of "
-            . "the requested equipment items.",
+            . "Run calibration again and mark the requested padlock "
+            . "keyholes accurately.",
             APP_NAME
         )
         ExitApp
     }
 
-    gridX1 := topLeft[1]
-    gridX2 := topMiddle[1]
+    itemClick := CapturePoint(
+        "Equipment opening click point",
+        "Place the mouse on a SAFE point inside the TOP-LEFT equipment tile "
+        . "that opens the equipment details when clicked.`n`n"
+        . "Do NOT use the padlock for this point."
+    )
+
+    gridX1 := itemClick[1]
+    gridX2 := gridX1 + xSpacing
     gridX3 := gridX2 + xSpacing
 
-    gridY1 := topLeft[2]
-    gridY2 := secondRowLeft[2]
+    gridY1 := itemClick[2]
+    gridY2 := gridY1 + ySpacing
     gridY3 := gridY2 + ySpacing
     gridY4 := gridY3 + ySpacing
 
@@ -84,18 +95,18 @@ StartCalibration()
     )
 
     topRightLock := CapturePoint(
-        "Top-right padlock",
+        "Top-right keyhole",
         "First, manually close the equipment popup and make sure the list "
         . "is still at the absolute top.`n`n"
-        . "Place the mouse in the CENTRE of the padlock on the TOP-RIGHT "
-        . "equipment tile.`n`n"
+        . "Place the mouse precisely on the KEYHOLE of the padlock "
+        . "on the TOP-RIGHT equipment tile.`n`n"
         . "The padlock may be red or black."
     )
 
     bottomRightLock := CapturePoint(
-        "Bottom-right / 15th-item padlock",
-        "Place the mouse in the CENTRE of the padlock on the BOTTOM-RIGHT "
-        . "equipment tile (the 15th item).`n`n"
+        "Bottom-right / 15th-item keyhole",
+        "Place the mouse precisely on the KEYHOLE of the padlock "
+        . "on the BOTTOM-RIGHT equipment tile (the 15th item).`n`n"
         . "The padlock may be red or black.`n"
         . "Do not drag the list. Only position the pointer and press T."
     )
@@ -106,7 +117,7 @@ StartCalibration()
     if dragEnd[2] >= dragStart[2]
     {
         MsgBox(
-            "The top-right padlock must be above the bottom-right padlock.`n`n"
+            "The top-right keyhole must be above the bottom-right keyhole.`n`n"
             . "No configuration was saved. Run calibration again.",
             APP_NAME
         )
@@ -118,8 +129,8 @@ StartCalibration()
     if movementDistance < (ySpacing * 3)
     {
         MsgBox(
-            "The measured padlock distance looks too small.`n`n"
-            . "Top-right and bottom-right padlocks should be about four "
+            "The measured keyhole distance looks too small.`n`n"
+            . "Top-right and bottom-right keyholes should be about four "
             . "equipment rows apart.`n`n"
             . "No configuration was saved. Run calibration again.",
             APP_NAME
@@ -152,16 +163,17 @@ StartCalibration()
 
     summary := (
         "Calibration saved successfully.`n`n"
-        . "Grid columns: "
+        . "Grid spacing: " . xSpacing . " x " . ySpacing . " px`n"
+        . "Grid click columns: "
         . gridX1 . ", " . gridX2 . ", " . gridX3 . "`n"
-        . "Grid rows: "
+        . "Grid click rows: "
         . gridY1 . ", " . gridY2 . ", "
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "
         . popupClose[1] . ", " . popupClose[2] . "`n"
-        . "Top-right padlock: "
+        . "Top-right keyhole: "
         . topRightLock[1] . ", " . topRightLock[2] . "`n"
-        . "Bottom-right padlock: "
+        . "Bottom-right keyhole: "
         . bottomRightLock[1] . ", " . bottomRightLock[2] . "`n"
         . "Calculated drag: "
         . dragStart[1] . ", " . dragStart[2]

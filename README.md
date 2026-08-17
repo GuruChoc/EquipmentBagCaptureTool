@@ -70,25 +70,28 @@ The tool is designed specifically for this view.
 ## 3. Calibrate
 
 1. Open the correct 3-column bag view described above.
-2. Select a category containing at least **15 items** so the top-right and bottom-right / 15th-item padlocks are both visible.
+2. Select a category containing at least **15 items**.
 3. Put the list at the absolute top.
 4. Keep the Maple window in the exact position and size you will use later.
 5. Double-click `EquipmentBagCaptureCalibration.ahk`.
 6. Follow each prompt and press `T` to record the requested point.
 7. The wizard creates `EquipmentBagCapture.ini` beside the scripts.
 
+For all padlock reference points, aim precisely at the **keyhole**. The padlock may be red or black; its colour does not matter.
+
 Calibration records:
 
-- top-left equipment item centre
-- top-middle equipment item centre
-- second-row left equipment item centre
+- keyhole on the top-left equipment item
+- keyhole on the top-middle equipment item
+- keyhole on the second-row left equipment item
+- one safe click point inside the top-left equipment tile, used to open equipment details
 - popup close button
-- centre of the padlock on the **top-right equipment tile**
-- centre of the padlock on the **bottom-right / 15th equipment tile**
+- keyhole on the **top-right equipment tile**
+- keyhole on the **bottom-right / 15th equipment tile**
 
-The padlocks may be red or black. Their colour does not matter; they are used only as clear reference points.
+The first three keyholes provide precise horizontal and vertical grid spacing. The separate safe click point prevents the capture script from clicking the padlocks themselves. The remaining equipment click positions are calculated automatically from that safe point and the measured spacing.
 
-The remaining grid coordinates are calculated from the measured spacing. The movement calibration no longer asks you to guess drag start/end positions: the script uses the bottom-right padlock as the drag start and the top-right padlock as the drag end, preserving the proven upward-drag routine.
+The movement calibration uses the bottom-right / 15th-item keyhole as the drag start and the top-right keyhole as the drag end, preserving the proven upward-drag routine.
 
 Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.
 
@@ -169,10 +172,11 @@ Start ShareX before pressing `F8`.
 - restore Maple to the calibrated position and size
 - restore the calibrated resolution/display scaling
 - rerun calibration
+- make sure the safe top-left click point is inside the equipment tile and not on its padlock
 
 ### Movement is wrong
 
-- recalibrate and make sure you mark the **top-right padlock** and **bottom-right / 15th-item padlock** accurately
+- recalibrate and mark the **keyholes** on the top-right and bottom-right / 15th-item padlocks accurately
 - make sure the bag is at the absolute top during calibration
 - rerun the 36-item test before attempting another full bag
 

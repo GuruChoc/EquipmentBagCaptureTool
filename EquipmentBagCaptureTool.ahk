@@ -30,6 +30,7 @@ global CALIBRATED_SCREEN_WIDTH := 0
 global CALIBRATED_SCREEN_HEIGHT := 0
 
 global RequestedItems := 0
+global ExpectedMovements := 0
 global CompletedScreenshots := 0
 global CompletedMovements := 0
 global CaptureRunning := false
@@ -40,6 +41,7 @@ F8::StartEquipmentCapture()
 
 Esc::
 {
+    ToolTip
     ReleaseEverything()
     ExitApp
 }
@@ -66,6 +68,7 @@ StartEquipmentCapture()
     global MapleHwnd
     global ITEMS_PER_SCREEN
     global RequestedItems
+    global ExpectedMovements
     global CompletedScreenshots
     global CompletedMovements
     global CaptureRunning
@@ -165,13 +168,13 @@ StartEquipmentCapture()
     }
 
     requiredScreens := Ceil(RequestedItems / ITEMS_PER_SCREEN)
-    requiredMovements := Max(0, requiredScreens - 1)
+    ExpectedMovements := Max(0, requiredScreens - 1)
 
     answer := MsgBox(
         "Ready to capture the equipment bag.`n`n"
         . "Equipment items: " . RequestedItems . "`n"
         . "Items per screen: " . ITEMS_PER_SCREEN . "`n"
-        . "Required movements: " . requiredMovements . "`n`n"
+        . "Required movements: " . ExpectedMovements . "`n`n"
         . "Before starting:`n"
         . "• ShareX is ready to capture the saved popup region.`n"
         . "• Maple is in Preset → Chapter → Chapter Hunt → Edit Preset.`n"
@@ -181,6 +184,7 @@ StartEquipmentCapture()
         . "• No equipment popup is currently open.`n"
         . "• Maple is in its calibrated position and size.`n"
         . "• Do not touch the mouse or keyboard.`n`n"
+        . "A small live counter will appear in the top-left corner.`n`n"
         . "Press Esc at any time to stop and exit the script completely.`n"
         . "If you do, restart EquipmentBagCaptureTool.ahk before trying again.",
         APP_NAME,
@@ -195,10 +199,12 @@ StartEquipmentCapture()
     CompletedScreenshots := 0
     CompletedMovements := 0
     CaptureRunning := true
+    UpdateProgress()
 
     if !ActivateMaple()
     {
         CaptureRunning := false
+        ToolTip
         MsgBox("Maple could not be activated.", APP_NAME)
         return
     }
@@ -223,6 +229,7 @@ StartEquipmentCapture()
         if !CaptureItems(itemsThisScreen, startGridRow)
         {
             CaptureRunning := false
+            ToolTip
             return
         }
 
@@ -236,6 +243,7 @@ StartEquipmentCapture()
             if !MoveOnce()
             {
                 CaptureRunning := false
+                ToolTip
                 return
             }
 
@@ -244,6 +252,7 @@ StartEquipmentCapture()
     }
 
     CaptureRunning := false
+    ToolTip
     ShowCompletionReport()
 }
 
@@ -328,6 +337,7 @@ CaptureItems(itemsToCapture, startGridRow := 1)
 
         TriggerShareX()
         CompletedScreenshots += 1
+        UpdateProgress()
     }
 
     if !ActivateMaple()
@@ -375,6 +385,7 @@ MoveOnce()
 
     PerformDrag(movementDistance)
     CompletedMovements += 1
+    UpdateProgress()
     Sleep 800
     return true
 }
@@ -408,6 +419,21 @@ PerformDrag(movementDistance)
     Sleep HOLD_DELAY
     Click "Up"
     Sleep 300
+}
+
+UpdateProgress()
+{
+    global RequestedItems
+    global ExpectedMovements
+    global CompletedScreenshots
+    global CompletedMovements
+
+    ToolTip(
+        "Captured: " . CompletedScreenshots . " / " . RequestedItems . "`n"
+        . "Movements: " . CompletedMovements . " / " . ExpectedMovements,
+        20,
+        20
+    )
 }
 
 ActivateMaple()

@@ -138,8 +138,7 @@ StartCalibration()
         . Round((scrollShort + scrollLong) / 2, 3) . " px`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
-        . "Run EquipmentBagMovementTest.ahk first if you want a scroll-only check, "
-        . "then run EquipmentBagCaptureTool.ahk."
+        . "Run EquipmentBagCaptureTool.ahk and perform a small multi-screen test before a full bag."
     )
 
     A_Clipboard := summary

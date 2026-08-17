@@ -28,8 +28,8 @@ StartCalibration()
         . "• Select an equipment category with at least 15 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
-        . "For equipment reference points, aim at the KEYHOLE in the padlock. "
-        . "The padlock may be red or black.`n`n"
+        . "For equipment reference points, aim precisely at the KEYHOLE "
+        . "in the padlock. The padlock may be red or black.`n`n"
         . "For each point, move the mouse to the requested position "
         . "and press T.`n`n"
         . "Press Esc at any time to cancel.",
@@ -72,19 +72,15 @@ StartCalibration()
         ExitApp
     }
 
-    itemClick := CapturePoint(
-        "Equipment opening click point",
-        "Place the mouse on a SAFE point inside the TOP-LEFT equipment tile "
-        . "that opens the equipment details when clicked.`n`n"
-        . "Do NOT use the padlock for this point."
-    )
-
-    gridX1 := itemClick[1]
-    gridX2 := gridX1 + xSpacing
+    ; The keyhole positions themselves are safe item-opening click points
+    ; in the 3-column equipment bag. Locks can only be changed in the
+    ; equipment details popup, not from the grid.
+    gridX1 := topLeftLock[1]
+    gridX2 := topMiddleLock[1]
     gridX3 := gridX2 + xSpacing
 
-    gridY1 := itemClick[2]
-    gridY2 := gridY1 + ySpacing
+    gridY1 := topLeftLock[2]
+    gridY2 := secondRowLeftLock[2]
     gridY3 := gridY2 + ySpacing
     gridY4 := gridY3 + ySpacing
 
@@ -164,9 +160,9 @@ StartCalibration()
     summary := (
         "Calibration saved successfully.`n`n"
         . "Grid spacing: " . xSpacing . " x " . ySpacing . " px`n"
-        . "Grid click columns: "
+        . "Grid keyhole columns: "
         . gridX1 . ", " . gridX2 . ", " . gridX3 . "`n"
-        . "Grid click rows: "
+        . "Grid keyhole rows: "
         . gridY1 . ", " . gridY2 . ", "
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "

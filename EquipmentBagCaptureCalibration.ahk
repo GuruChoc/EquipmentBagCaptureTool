@@ -29,7 +29,7 @@ StartCalibration()
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
         . "For each point, move the mouse to the requested position "
-        . "and press F9.`n`n"
+        . "and press T.`n`n"
         . "Press Esc at any time to cancel.",
         APP_NAME,
         "OKCancel Icon!"
@@ -93,7 +93,7 @@ StartCalibration()
     dragEnd := CapturePoint(
         "Movement end point",
         "Place the mouse at the point where the upward drag should END.`n`n"
-        . "Do not drag the list. Only position the pointer and press F9."
+        . "Do not drag the list. Only position the pointer and press T."
     )
 
     if dragEnd[2] >= dragStart[2]
@@ -162,24 +162,24 @@ CapturePoint(pointName, instructions)
 
     MsgBox(
         instructions . "`n`n"
-        . "After closing this message, press F9 to record the point.",
+        . "After closing this message, press T to record the point.",
         APP_NAME . " - " . pointName
     )
 
     ToolTip(
         pointName . "`n"
-        . "Move the pointer into position and press F9.`n"
+        . "Move the pointer into position and press T.`n"
         . "Press Esc to cancel.",
         20,
         20
     )
 
-    KeyWait "F9"
-    KeyWait "F9", "D"
+    KeyWait "t"
+    KeyWait "t", "D"
 
     MouseGetPos &pointX, &pointY
 
-    KeyWait "F9"
+    KeyWait "t"
     ToolTip
 
     Sleep 200

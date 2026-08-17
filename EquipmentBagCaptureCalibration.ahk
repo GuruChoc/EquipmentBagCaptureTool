@@ -25,14 +25,14 @@ StartCalibration()
         . "• Click Edit Preset.`n"
         . "• In Manage Equipment, click the symbol in the bottom-right corner.`n"
         . "• Confirm the equipment bag is shown in 3 columns.`n"
-        . "• Select an equipment category with at least 15 items.`n"
+        . "• Select an equipment category with at least 6 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
         . "For equipment reference points, aim precisely at the BOTTOM-RIGHT CORNER "
         . "of the tier badge (T1, T2, T3 or T4).`n`n"
         . "For each point, move the mouse to the requested position "
         . "and press T.`n`n"
-        . "Press Esc at any time to cancel.",
+        . "Press Esc at any time to cancel. Esc closes this calibration script completely.",
         APP_NAME,
         "OKCancel Icon!"
     )
@@ -87,47 +87,14 @@ StartCalibration()
         . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    topRightRef := CapturePoint(
-        "Top-right tier badge corner",
-        "First, manually close the equipment popup and make sure the list "
-        . "is still at the absolute top.`n`n"
-        . "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
-        . "on the TOP-RIGHT equipment tile."
-    )
-
-    bottomRightRef := CapturePoint(
-        "Bottom-right / 15th-item tier badge corner",
-        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
-        . "on the BOTTOM-RIGHT equipment tile (the 15th item).`n`n"
-        . "Do not drag the list. Only position the pointer and press T."
-    )
-
-    dragStart := bottomRightRef
-    dragEnd := topRightRef
-
-    if dragEnd[2] >= dragStart[2]
-    {
-        MsgBox(
-            "The top-right tier badge corner must be above the bottom-right corner.`n`n"
-            . "No configuration was saved. Run calibration again.",
-            APP_NAME
-        )
-        ExitApp
-    }
-
-    movementDistance := dragStart[2] - dragEnd[2]
-
-    if movementDistance < (ySpacing * 3)
-    {
-        MsgBox(
-            "The measured tier badge corner distance looks too small.`n`n"
-            . "The top-right and bottom-right reference points should be about four "
-            . "equipment rows apart.`n`n"
-            . "No configuration was saved. Run calibration again.",
-            APP_NAME
-        )
-        ExitApp
-    }
+    ; Movement is calculated from the measured grid spacing instead of
+    ; asking the user to guess two drag positions. One capture movement is
+    ; exactly four equipment-row spacings, using the right-hand column.
+    dragStartX := gridX3
+    dragStartY := gridY1 + (ySpacing * 4)
+    dragEndX := gridX3
+    dragEndY := gridY1
+    movementDistance := ySpacing * 4
 
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
@@ -144,10 +111,10 @@ StartCalibration()
     IniWrite(popupClose[1], CONFIG_FILE, "Popup", "CloseX")
     IniWrite(popupClose[2], CONFIG_FILE, "Popup", "CloseY")
 
-    IniWrite(dragStart[1], CONFIG_FILE, "Movement", "StartX")
-    IniWrite(dragStart[2], CONFIG_FILE, "Movement", "StartY")
-    IniWrite(dragEnd[1], CONFIG_FILE, "Movement", "EndX")
-    IniWrite(dragEnd[2], CONFIG_FILE, "Movement", "EndY")
+    IniWrite(dragStartX, CONFIG_FILE, "Movement", "StartX")
+    IniWrite(dragStartY, CONFIG_FILE, "Movement", "StartY")
+    IniWrite(dragEndX, CONFIG_FILE, "Movement", "EndX")
+    IniWrite(dragEndY, CONFIG_FILE, "Movement", "EndY")
     IniWrite(36, CONFIG_FILE, "Movement", "Steps")
     IniWrite(20, CONFIG_FILE, "Movement", "StepDelay")
     IniWrite(700, CONFIG_FILE, "Movement", "HoldDelay")
@@ -162,14 +129,10 @@ StartCalibration()
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "
         . popupClose[1] . ", " . popupClose[2] . "`n"
-        . "Top-right tier badge corner: "
-        . topRightRef[1] . ", " . topRightRef[2] . "`n"
-        . "Bottom-right tier badge corner: "
-        . bottomRightRef[1] . ", " . bottomRightRef[2] . "`n"
         . "Calculated drag: "
-        . dragStart[1] . ", " . dragStart[2]
-        . " to " . dragEnd[1] . ", " . dragEnd[2] . "`n"
-        . "Movement distance: " . movementDistance . " px`n`n"
+        . dragStartX . ", " . dragStartY
+        . " to " . dragEndX . ", " . dragEndY . "`n"
+        . "Movement distance: " . movementDistance . " px (4 row spacings)`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
         . "Run EquipmentBagCaptureTool.ahk and perform a 12-item test first."
@@ -200,7 +163,7 @@ CapturePoint(pointName, instructions)
     ToolTip(
         pointName . "`n"
         . "Move the pointer into position and press T.`n"
-        . "Press Esc to cancel.",
+        . "Press Esc to cancel. Esc closes this calibration script completely.",
         20,
         20
     )

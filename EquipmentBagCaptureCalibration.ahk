@@ -87,14 +87,17 @@ StartCalibration()
         . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    ; Movement is calculated from the measured grid spacing instead of
-    ; asking the user to guess two drag positions. One capture movement is
-    ; exactly four equipment-row spacings, using the right-hand column.
+    ; Proven successful movement used a 576 px drag with 140 px row spacing.
+    ; Four row spacings were 560 px, so Maple needed a movement factor of
+    ; 576 / 560 = 1.028571... . Apply that same ratio to the user's measured
+    ; row spacing so different resolutions/scaling remain supported.
+    baseFourRows := ySpacing * 4
+    movementDistance := Round(baseFourRows * 576 / 560)
+
     dragStartX := gridX3
-    dragStartY := gridY1 + (ySpacing * 4)
+    dragStartY := gridY1 + movementDistance
     dragEndX := gridX3
     dragEndY := gridY1
-    movementDistance := ySpacing * 4
 
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
@@ -129,10 +132,11 @@ StartCalibration()
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "
         . popupClose[1] . ", " . popupClose[2] . "`n"
+        . "Base four-row distance: " . baseFourRows . " px`n"
         . "Calculated drag: "
         . dragStartX . ", " . dragStartY
         . " to " . dragEndX . ", " . dragEndY . "`n"
-        . "Movement distance: " . movementDistance . " px (4 row spacings)`n`n"
+        . "Movement distance: " . movementDistance . " px (scaled from proven 576/560 ratio)`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
         . "Run EquipmentBagCaptureTool.ahk and perform a 12-item test first."

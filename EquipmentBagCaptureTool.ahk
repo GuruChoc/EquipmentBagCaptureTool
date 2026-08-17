@@ -51,7 +51,8 @@ ShowStartupMessage()
     MsgBox(
         "Equipment Bag Capture Tool is ready.`n`n"
         . "Press F8 to start a capture.`n"
-        . "Press Esc to exit.`n`n"
+        . "Press Esc to stop and exit the script completely.`n`n"
+        . "If you press Esc, restart EquipmentBagCaptureTool.ahk before trying again.`n`n"
         . "Press Enter or click OK to close this window.",
         APP_NAME
     )
@@ -182,7 +183,8 @@ StartEquipmentCapture()
         . "• No equipment popup is currently open.`n"
         . "• Maple is in its calibrated position and size.`n"
         . "• Do not touch the mouse or keyboard.`n`n"
-        . "Press Esc at any time to stop.",
+        . "Press Esc at any time to stop and exit the script completely.`n"
+        . "If you do, restart EquipmentBagCaptureTool.ahk before trying again.",
         APP_NAME,
         "OKCancel Icon!"
     )
@@ -443,7 +445,7 @@ LowLevelClick(clickX, clickY)
     Sleep 220
     DllCall(
         "mouse_event", "UInt", 0x0004,
-        "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0
+        "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0
     )
     Sleep 120
 }

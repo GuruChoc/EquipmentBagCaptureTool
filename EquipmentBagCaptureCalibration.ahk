@@ -96,10 +96,14 @@ StartCalibration()
     baseFourRows := ySpacing * 4
     movementDistance := Round(baseFourRows * 622 / 544)
 
+    ; Keep the mouse-down point at the calculated fifth-row position so it
+    ; remains safely inside the scrollable equipment list. Apply any extra
+    ; correction distance by extending the drag endpoint upward instead of
+    ; pushing the start point into the bottom UI area.
     dragStartX := gridX3
-    dragStartY := gridY1 + movementDistance
+    dragStartY := gridY1 + baseFourRows
     dragEndX := gridX3
-    dragEndY := gridY1
+    dragEndY := dragStartY - movementDistance
 
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")

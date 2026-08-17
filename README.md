@@ -90,28 +90,30 @@ The first three tier-badge corners provide the equipment click positions and the
 
 ### How scrolling is calculated
 
-The movement distance is **not manually calibrated**. The script starts from the measured four-row distance and scales it using the ratio from the proven successful full-bag movement.
+The movement distance is **not manually calibrated**. The script starts from the measured four-row geometry, then scales the mouse drag using the actual Maple response measured from before/after screenshots.
 
-The known-good run used:
+In the measured test:
 
-- row spacing: **140 px**
-- four-row geometric distance: **560 px**
-- actual successful drag distance: **576 px**
+- row spacing: **136 px**
+- four-row geometric distance: **544 px**
+- a **560 px** commanded drag moved the equipment content only about **505 px**
+- the content needed to move about **561 px** for the fifth row to land at the original first-row position
+- corrected commanded drag: approximately **622 px**
 
-So the script applies the same movement factor:
+The script therefore uses the measured scaling ratio:
 
-`576 / 560 = 1.028571...`
+`622 / 544 = 1.143382...`
 
 The current PC's movement is calculated as:
 
-`round((4 × measured row spacing) × 576 / 560)`
+`round((4 × measured row spacing) × 622 / 544)`
 
-For example, if calibration measures a row spacing of 136 px:
+For example, with a measured row spacing of 136 px:
 
-- four-row geometric distance = `4 × 136 = 544 px`
-- calculated drag = `round(544 × 576 / 560) = 560 px`
+- four-row geometry = `4 × 136 = 544 px`
+- calculated drag = `622 px`
 
-This preserves the proven Maple scroll allowance while still adapting to different resolutions and scaling. The ratio is fixed, but the underlying row spacing is measured from the user's own setup. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
+This still adapts to different resolutions because the underlying row spacing is measured on the current PC. The correction ratio represents Maple's observed drag-to-scroll response and must still be validated with the 36-item test on a new setup. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
 
 ## 4. Mandatory test sequence
 
@@ -214,7 +216,7 @@ The game did not accept the equipment selection before ShareX captured the popup
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
-- assumes one calculated scaled movement advances to the next group of items
+- assumes the measured Maple scroll-response ratio is reasonably consistent across setups
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment

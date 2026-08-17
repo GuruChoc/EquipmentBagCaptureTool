@@ -90,15 +90,28 @@ The first three tier-badge corners provide the equipment click positions and the
 
 ### How scrolling is calculated
 
-The movement distance is **not manually calibrated**. The script calculates it from the measured grid geometry:
+The movement distance is **not manually calibrated**. The script starts from the measured four-row distance and scales it using the ratio from the proven successful full-bag movement.
 
-- drag X = calculated right-hand equipment column
-- drag end Y = measured top-row Y
-- drag start Y = top-row Y + **4 × measured row spacing**
+The known-good run used:
 
-That means one movement is always exactly four equipment-row spacings. For example, if calibration measures a row spacing of 139 px, the movement distance is `4 × 139 = 556 px`.
+- row spacing: **140 px**
+- four-row geometric distance: **560 px**
+- actual successful drag distance: **576 px**
 
-Because the row and column spacing are measured on the current PC during calibration, this method is not tied to one fixed resolution. A different resolution or scaling can produce different pixel spacing and the calculation will use those measured values. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
+So the script applies the same movement factor:
+
+`576 / 560 = 1.028571...`
+
+The current PC's movement is calculated as:
+
+`round((4 × measured row spacing) × 576 / 560)`
+
+For example, if calibration measures a row spacing of 136 px:
+
+- four-row geometric distance = `4 × 136 = 544 px`
+- calculated drag = `round(544 × 576 / 560) = 560 px`
+
+This preserves the proven Maple scroll allowance while still adapting to different resolutions and scaling. The ratio is fixed, but the underlying row spacing is measured from the user's own setup. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
 
 ## 4. Mandatory test sequence
 
@@ -201,7 +214,7 @@ The game did not accept the equipment selection before ShareX captured the popup
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
-- assumes one calculated four-row movement advances to the next group of items
+- assumes one calculated scaled movement advances to the next group of items
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment

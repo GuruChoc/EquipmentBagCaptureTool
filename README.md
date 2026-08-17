@@ -77,47 +77,36 @@ The tool is designed specifically for this view.
 6. Follow each prompt and press `T` to record the requested point.
 7. The wizard creates `EquipmentBagCapture.ini` beside the scripts.
 
-For every equipment reference point, aim precisely at the **bottom-right corner of the tier badge**. The badge may show **T1, T2, T3 or T4** depending on the equipment; the tier value does not matter.
+For every equipment reference point, use the **tip of the Maple glove cursor finger** and place it directly over the **dot in `Lv.`**. The `Lv.` text is a consistent landmark across equipment tiles and is easier to target repeatedly than a badge corner.
 
 Calibration records only:
 
-- bottom-right corner of the tier badge on the top-left equipment item
-- bottom-right corner of the tier badge on the top-middle equipment item
-- bottom-right corner of the tier badge on the second-row left equipment item
+- glove fingertip on the dot in `Lv.` on the top-left equipment item
+- glove fingertip on the dot in `Lv.` on the top-middle equipment item
+- glove fingertip on the dot in `Lv.` on the second-row left equipment item
 - popup close button
 
-The first three tier-badge corners provide the equipment click positions and the horizontal/vertical grid spacing. The remaining grid click positions are calculated automatically from that measured spacing.
+The first three `Lv.` points provide the equipment click positions and the horizontal/vertical grid spacing. The remaining grid click positions are calculated automatically from that measured spacing.
 
 ### How scrolling is calculated
 
-The movement distance is **not manually calibrated**. The script starts from the measured four-row geometry, then scales the mouse drag using the actual Maple response measured from before/after screenshots.
+The movement distance is **not manually calibrated and no correction ratio is applied**. The equipment grid itself is used as the ruler.
 
-In the measured test:
+The measured vertical distance from the `Lv.` dot on one row to the same `Lv.` dot on the next row is one complete **row pitch**: the item height plus the vertical gap between items.
 
-- row spacing: **136 px**
-- four-row geometric distance: **544 px**
-- a **560 px** commanded drag moved the equipment content only about **505 px**
-- the content needed to move about **561 px** for the fifth row to land at the original first-row position
-- corrected commanded drag: approximately **622 px**
+After the fourth visible row is processed, the script calculates the next-row reference point by moving one row pitch below row 4. It then grabs the list there and drags upward exactly **four measured row pitches**, ending at the original row-1 reference position.
 
-The script therefore uses the measured scaling ratio:
+So the movement is simply:
 
-`622 / 544 = 1.143382...`
+`movement distance = 4 × measured row pitch`
 
-The current PC's movement is calculated as:
+For example, if calibration measures a vertical row pitch of 140 px:
 
-`round((4 × measured row spacing) × 622 / 544)`
+- row-5 grab point = row-1 reference + `4 × 140`
+- movement distance = `560 px`
+- drag endpoint = original row-1 reference
 
-The **mouse-down point stays at the calculated fifth-row position inside the equipment list**. Any extra correction distance is applied by extending the drag endpoint upward. This prevents the start point from drifting down into the lower UI where Maple may fail to grab the scrollable list.
-
-For example, with a top-row reference of 360 px and row spacing of 139 px:
-
-- four-row geometry = `556 px`
-- calculated fifth-row drag start = `360 + 556 = 916 px`
-- scaled drag distance = about `636 px`
-- calculated drag end = `916 - 636 = 280 px`
-
-This still adapts to different resolutions because the underlying row spacing and top-row position are measured on the current PC. The correction ratio represents Maple's observed drag-to-scroll response and must still be validated on a new setup. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
+Because the row and column pitches are measured during calibration, the same method adapts to different resolutions and scaling without using hard-coded coordinates. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
 
 ## 4. Mandatory test sequence
 
@@ -128,9 +117,10 @@ This still adapts to different resolutions because the underlying row spacing an
 5. Enter `12`.
 6. Confirm exactly 12 screenshots were saved and all are unique.
 7. Reset the list to the absolute top.
-8. Press `F8` and enter `36`.
-9. Confirm exactly 36 screenshots were saved and two movements occurred.
-10. Check the screenshots for duplicates or skipped items before attempting a full bag.
+8. Press `F8` and enter `24` for a one-movement test.
+9. Confirm the next group of items aligns correctly after the single movement.
+10. Reset the list to the absolute top and run `36` before attempting a full bag.
+11. Check the screenshots for duplicates or skipped items.
 
 **Important:** pressing `Esc` at any time stops the current run **and closes `EquipmentBagCaptureTool.ahk` completely**. If you press `Esc`, restart `EquipmentBagCaptureTool.ahk` before trying another test or capture.
 
@@ -198,14 +188,14 @@ Start ShareX before pressing `F8`.
 - restore Maple to the calibrated position and size
 - restore the calibrated resolution/display scaling
 - rerun calibration
-- make sure the first three calibration points are placed precisely on the requested tier-badge corners
+- make sure the glove fingertip is placed precisely on the requested `Lv.` dots
 
 ### Movement is wrong
 
-- make sure the first three tier-badge reference points were marked accurately
+- make sure the first three `Lv.` reference points were marked accurately
 - make sure the bag was at the absolute top during calibration
 - recalibrate after any resolution, scaling, Maple window size or position change
-- rerun the 36-item test before attempting another full bag
+- rerun the 24-item one-movement test before attempting another full bag
 
 ### I pressed Esc and F8 no longer works
 
@@ -220,7 +210,7 @@ The game did not accept the equipment selection before ShareX captured the popup
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
-- assumes the measured Maple scroll-response ratio is reasonably consistent across setups
+- assumes the measured row pitch correctly represents one complete item-plus-gap step
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment

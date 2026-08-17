@@ -78,7 +78,23 @@ The wizard records:
 
 The calibration prompts display a large bold **`Lv.`** target. Press **Enter** or click **Continue** to close each instruction window, then position the glove and press **T** to record the point.
 
-The first three points establish the horizontal and vertical grid pitch. The remaining grid positions are calculated from those measurements.
+### Human-friendly calibration tolerance
+
+The calibration is deliberately designed so users do **not** have to be perfectly accurate to a single pixel every time.
+
+The validated layout uses approximately:
+
+- horizontal pitch: **131 px**
+- vertical pitch: **140 px**
+
+Small hand-placement differences are automatically normalized:
+
+- measured horizontal pitch from **129 to 133 px** is treated as **131 px**
+- measured vertical pitch from **138 to 142 px** is treated as **140 px**
+
+So a user measuring 139 px on one calibration and 140 px on the next does not suddenly get different scrolling behaviour. The raw measurement and the effective normalized measurement are both stored in the local INI for troubleshooting.
+
+If the measured pitch is clearly outside those tolerance ranges, the tool assumes the layout, resolution or scaling is genuinely different and uses/scales from the actual measured pitch instead.
 
 The popup-close position is calculated from the popup `Lv.` landmark, so the user no longer has to manually target the popup X during calibration.
 
@@ -86,13 +102,15 @@ Recalibrate whenever resolution, Windows display scaling, Maple window size, Map
 
 ## 4. Scrolling behaviour
 
-The mouse-down point is the calculated **row 5 / column 3 `Lv.` position**: one measured row pitch below the fourth visible row.
+The mouse-down point is the calculated **row 5 / column 3 `Lv.` position**: one effective row pitch below the fourth visible row.
 
-Testing showed that a geometric four-row drag was slightly short because Maple does not translate mouse travel into list movement perfectly one-for-one. On the validated setup, repeated tests found the stable sweet spot at **576 and 577 px**, alternating on successive movements:
+Testing showed that a geometric four-row drag was slightly short because Maple does not translate mouse travel into list movement perfectly one-for-one. On the validated 140 px layout, repeated tests found the stable sweet spot at **576 and 577 px**, alternating on successive movements:
 
 `576, 577, 576, 577, ...`
 
-This averages **576.5 px** over an even number of movements and reduces cumulative drift across long equipment bags. Calibration scales the short and long distances from the measured row pitch, using the validated 140 px reference pitch.
+This averages **576.5 px** over an even number of movements and reduces cumulative drift across long equipment bags.
+
+Because the calibration now normalizes small 1-2 pixel human variation around the validated 140 px row pitch, measurements such as 138, 139, 140, 141 or 142 px all retain the proven literal **576 / 577 px** movement pattern. The distances are scaled only when the measured layout is clearly different from the validated geometry.
 
 The movement routine itself remains the proven single held drag:
 
@@ -115,7 +133,7 @@ After calibrating, use a small category first.
 5. Reset the list to the absolute top.
 6. Run a multi-screen test such as `36` items and check for duplicates or skipped items.
 
-The screenshot side uses the previously proven two-click selection and ShareX behaviour; movement now uses the verified row-5 grab point and alternating short/long drag distances.
+The screenshot side uses the previously proven two-click selection and ShareX behaviour; movement uses the verified row-5 grab point and alternating short/long drag distances.
 
 ## 6. Capture a full equipment bag
 
@@ -180,13 +198,13 @@ Start ShareX before pressing `F8`.
 - restore Maple to the calibrated position and size
 - restore the calibrated resolution/display scaling
 - rerun calibration
-- make sure the glove fingertip is placed precisely on the requested `Lv.` dots
+- aim carefully at the requested `Lv.` dots; tiny 1-2 px pitch variation is normalized automatically
 
 ### Movement is wrong
 
-- make sure the first three `Lv.` reference points were marked accurately
 - make sure the list was at the absolute top during calibration and at the start of the run
 - recalibrate after any resolution, scaling, Maple window size or position change
+- check the calibration summary: on the validated layout, small pitch variation should normalize to **131 x 140 px** and movement should remain **576 / 577 px**
 - test a small multi-screen category before a full bag
 
 ### I pressed Esc and F8 no longer works
@@ -202,7 +220,7 @@ The game did not accept the equipment selection before ShareX captured the popup
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
-- movement distances are scaled from the validated 140 px row-pitch setup and should be tested after calibration on a substantially different layout
+- the validated calibration tolerance is centered on the 131 x 140 px layout; substantially different layouts are scaled from their measured pitch and should be tested before a full run
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment

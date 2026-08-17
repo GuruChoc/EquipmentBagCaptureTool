@@ -28,8 +28,8 @@ StartCalibration()
         . "• Select an equipment category with at least 15 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
-        . "For equipment reference points, aim precisely at the KEYHOLE "
-        . "in the padlock. The padlock may be red or black.`n`n"
+        . "For equipment reference points, aim precisely at the BOTTOM-RIGHT CORNER "
+        . "of the tier badge (T1, T2, T3 or T4).`n`n"
         . "For each point, move the mouse to the requested position "
         . "and press T.`n`n"
         . "Press Esc at any time to cancel.",
@@ -40,47 +40,44 @@ StartCalibration()
     if answer != "OK"
         ExitApp
 
-    topLeftLock := CapturePoint(
-        "Grid keyhole 1 of 3",
-        "Place the mouse precisely on the KEYHOLE of the padlock "
+    topLeftRef := CapturePoint(
+        "Grid reference 1 of 3",
+        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
         . "on the TOP-LEFT equipment item."
     )
 
-    topMiddleLock := CapturePoint(
-        "Grid keyhole 2 of 3",
-        "Place the mouse precisely on the KEYHOLE of the padlock "
+    topMiddleRef := CapturePoint(
+        "Grid reference 2 of 3",
+        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
         . "on the TOP-MIDDLE equipment item."
     )
 
-    secondRowLeftLock := CapturePoint(
-        "Grid keyhole 3 of 3",
-        "Place the mouse precisely on the KEYHOLE of the padlock "
+    secondRowLeftRef := CapturePoint(
+        "Grid reference 3 of 3",
+        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
         . "on the LEFT equipment item in the SECOND ROW."
     )
 
-    xSpacing := topMiddleLock[1] - topLeftLock[1]
-    ySpacing := secondRowLeftLock[2] - topLeftLock[2]
+    xSpacing := topMiddleRef[1] - topLeftRef[1]
+    ySpacing := secondRowLeftRef[2] - topLeftRef[2]
 
     if xSpacing < 40 || ySpacing < 40
     {
         MsgBox(
             "The recorded grid spacing is too small.`n`n"
-            . "Run calibration again and mark the requested padlock "
-            . "keyholes accurately.",
+            . "Run calibration again and mark the requested tier badge "
+            . "corners accurately.",
             APP_NAME
         )
         ExitApp
     }
 
-    ; The keyhole positions themselves are safe item-opening click points
-    ; in the 3-column equipment bag. Locks can only be changed in the
-    ; equipment details popup, not from the grid.
-    gridX1 := topLeftLock[1]
-    gridX2 := topMiddleLock[1]
+    gridX1 := topLeftRef[1]
+    gridX2 := topMiddleRef[1]
     gridX3 := gridX2 + xSpacing
 
-    gridY1 := topLeftLock[2]
-    gridY2 := secondRowLeftLock[2]
+    gridY1 := topLeftRef[2]
+    gridY2 := secondRowLeftRef[2]
     gridY3 := gridY2 + ySpacing
     gridY4 := gridY3 + ySpacing
 
@@ -90,30 +87,28 @@ StartCalibration()
         . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    topRightLock := CapturePoint(
-        "Top-right keyhole",
+    topRightRef := CapturePoint(
+        "Top-right tier badge corner",
         "First, manually close the equipment popup and make sure the list "
         . "is still at the absolute top.`n`n"
-        . "Place the mouse precisely on the KEYHOLE of the padlock "
-        . "on the TOP-RIGHT equipment tile.`n`n"
-        . "The padlock may be red or black."
+        . "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
+        . "on the TOP-RIGHT equipment tile."
     )
 
-    bottomRightLock := CapturePoint(
-        "Bottom-right / 15th-item keyhole",
-        "Place the mouse precisely on the KEYHOLE of the padlock "
+    bottomRightRef := CapturePoint(
+        "Bottom-right / 15th-item tier badge corner",
+        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
         . "on the BOTTOM-RIGHT equipment tile (the 15th item).`n`n"
-        . "The padlock may be red or black.`n"
         . "Do not drag the list. Only position the pointer and press T."
     )
 
-    dragStart := bottomRightLock
-    dragEnd := topRightLock
+    dragStart := bottomRightRef
+    dragEnd := topRightRef
 
     if dragEnd[2] >= dragStart[2]
     {
         MsgBox(
-            "The top-right keyhole must be above the bottom-right keyhole.`n`n"
+            "The top-right tier badge corner must be above the bottom-right corner.`n`n"
             . "No configuration was saved. Run calibration again.",
             APP_NAME
         )
@@ -125,8 +120,8 @@ StartCalibration()
     if movementDistance < (ySpacing * 3)
     {
         MsgBox(
-            "The measured keyhole distance looks too small.`n`n"
-            . "Top-right and bottom-right keyholes should be about four "
+            "The measured tier badge corner distance looks too small.`n`n"
+            . "The top-right and bottom-right reference points should be about four "
             . "equipment rows apart.`n`n"
             . "No configuration was saved. Run calibration again.",
             APP_NAME
@@ -160,17 +155,17 @@ StartCalibration()
     summary := (
         "Calibration saved successfully.`n`n"
         . "Grid spacing: " . xSpacing . " x " . ySpacing . " px`n"
-        . "Grid keyhole columns: "
+        . "Grid reference columns: "
         . gridX1 . ", " . gridX2 . ", " . gridX3 . "`n"
-        . "Grid keyhole rows: "
+        . "Grid reference rows: "
         . gridY1 . ", " . gridY2 . ", "
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "
         . popupClose[1] . ", " . popupClose[2] . "`n"
-        . "Top-right keyhole: "
-        . topRightLock[1] . ", " . topRightLock[2] . "`n"
-        . "Bottom-right keyhole: "
-        . bottomRightLock[1] . ", " . bottomRightLock[2] . "`n"
+        . "Top-right tier badge corner: "
+        . topRightRef[1] . ", " . topRightRef[2] . "`n"
+        . "Bottom-right tier badge corner: "
+        . bottomRightRef[1] . ", " . bottomRightRef[2] . "`n"
         . "Calculated drag: "
         . dragStart[1] . ", " . dragStart[2]
         . " to " . dragEnd[1] . ", " . dragEnd[2] . "`n"

@@ -6,13 +6,22 @@ CoordMode "Mouse", "Screen"
 global APP_NAME := "Equipment Bag Capture Calibration"
 global CONFIG_FILE := A_ScriptDir . "\EquipmentBagCapture.ini"
 
-; Reference measurements from the validated 2560x1440 setup.
+; Validated reference setup.
 global REFERENCE_X_PITCH := 131
 global REFERENCE_Y_PITCH := 140
 global POPUP_CLOSE_DX := 382
 global POPUP_CLOSE_DY := -163
 global REFERENCE_SCROLL_SHORT := 576
 global REFERENCE_SCROLL_LONG := 577
+
+; Human-friendly tolerance. A calibration click can easily be a pixel or two
+; off even when the user is aiming at the correct Lv. dot. Measurements inside
+; these ranges are treated as the validated reference geometry instead of
+; changing capture/scroll behaviour because of tiny hand-placement variation.
+global X_PITCH_MIN := 129
+global X_PITCH_MAX := 133
+global Y_PITCH_MIN := 138
+global Y_PITCH_MAX := 142
 
 SetTimer(StartCalibration, -250)
 
@@ -28,6 +37,10 @@ StartCalibration()
     global POPUP_CLOSE_DY
     global REFERENCE_SCROLL_SHORT
     global REFERENCE_SCROLL_LONG
+    global X_PITCH_MIN
+    global X_PITCH_MAX
+    global Y_PITCH_MIN
+    global Y_PITCH_MAX
 
     IntroPrompt()
 
@@ -46,10 +59,10 @@ StartCalibration()
         "LEFT equipment item in the SECOND ROW"
     )
 
-    xSpacing := topMiddleRef[1] - topLeftRef[1]
-    ySpacing := secondRowLeftRef[2] - topLeftRef[2]
+    rawXSpacing := topMiddleRef[1] - topLeftRef[1]
+    rawYSpacing := secondRowLeftRef[2] - topLeftRef[2]
 
-    if xSpacing < 40 || ySpacing < 40
+    if rawXSpacing < 40 || rawYSpacing < 40
     {
         MsgBox(
             "The recorded grid spacing is too small.`n`n"
@@ -58,6 +71,23 @@ StartCalibration()
             APP_NAME
         )
         ExitApp
+    }
+
+    xSpacing := rawXSpacing
+    ySpacing := rawYSpacing
+    xNormalized := false
+    yNormalized := false
+
+    if rawXSpacing >= X_PITCH_MIN && rawXSpacing <= X_PITCH_MAX
+    {
+        xSpacing := REFERENCE_X_PITCH
+        xNormalized := true
+    }
+
+    if rawYSpacing >= Y_PITCH_MIN && rawYSpacing <= Y_PITCH_MAX
+    {
+        ySpacing := REFERENCE_Y_PITCH
+        yNormalized := true
     }
 
     gridX1 := topLeftRef[1]
@@ -76,16 +106,12 @@ StartCalibration()
         "Lv. text INSIDE THE OPEN EQUIPMENT POPUP"
     )
 
-    ; The popup-close offset is scaled from the validated reference setup.
     popupCloseX := popupLvRef[1] + Round(POPUP_CLOSE_DX * xSpacing / REFERENCE_X_PITCH)
     popupCloseY := popupLvRef[2] + Round(POPUP_CLOSE_DY * ySpacing / REFERENCE_Y_PITCH)
 
-    ; The verified grab point is one row pitch below row 4, column 3.
     dragStartX := gridX3
     dragStartY := gridY4 + ySpacing
 
-    ; Maple scroll movement was validated over repeated tests at 576/577 px
-    ; with a 140 px row pitch. Scale those distances for other UI sizes.
     scrollShort := Round(REFERENCE_SCROLL_SHORT * ySpacing / REFERENCE_Y_PITCH)
     scrollLong := Round(REFERENCE_SCROLL_LONG * ySpacing / REFERENCE_Y_PITCH)
 
@@ -100,6 +126,10 @@ StartCalibration()
     IniWrite(gridY2, CONFIG_FILE, "Grid", "Y2")
     IniWrite(gridY3, CONFIG_FILE, "Grid", "Y3")
     IniWrite(gridY4, CONFIG_FILE, "Grid", "Y4")
+    IniWrite(rawXSpacing, CONFIG_FILE, "Grid", "RawXSpacing")
+    IniWrite(rawYSpacing, CONFIG_FILE, "Grid", "RawYSpacing")
+    IniWrite(xSpacing, CONFIG_FILE, "Grid", "EffectiveXSpacing")
+    IniWrite(ySpacing, CONFIG_FILE, "Grid", "EffectiveYSpacing")
 
     IniWrite(popupLvRef[1], CONFIG_FILE, "Popup", "LvRefX")
     IniWrite(popupLvRef[2], CONFIG_FILE, "Popup", "LvRefY")
@@ -114,13 +144,21 @@ StartCalibration()
     IniWrite(20, CONFIG_FILE, "Movement", "StepDelay")
     IniWrite(700, CONFIG_FILE, "Movement", "HoldDelay")
 
-    ; Keep legacy EndX/EndY entries for compatibility with older test tools.
     IniWrite(dragStartX, CONFIG_FILE, "Movement", "EndX")
     IniWrite(dragStartY - scrollShort, CONFIG_FILE, "Movement", "EndY")
 
+    xNote := xNormalized
+        ? rawXSpacing . " px measured -> normalized to " . xSpacing . " px"
+        : rawXSpacing . " px measured -> used as measured"
+
+    yNote := yNormalized
+        ? rawYSpacing . " px measured -> normalized to " . ySpacing . " px"
+        : rawYSpacing . " px measured -> used as measured"
+
     summary := (
         "Calibration saved successfully.`n`n"
-        . "Grid spacing: " . xSpacing . " x " . ySpacing . " px`n"
+        . "Horizontal pitch: " . xNote . "`n"
+        . "Vertical pitch: " . yNote . "`n`n"
         . "Grid reference columns: "
         . gridX1 . ", " . gridX2 . ", " . gridX3 . "`n"
         . "Grid reference rows: "
@@ -138,7 +176,10 @@ StartCalibration()
         . Round((scrollShort + scrollLong) / 2, 3) . " px`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
-        . "Run EquipmentBagCaptureTool.ahk and perform a small multi-screen test before a full bag."
+        . "Small calibration differences around the validated layout are "
+        . "normalized automatically to reduce human-placement error.`n`n"
+        . "Run EquipmentBagCaptureTool.ahk and perform a small multi-screen "
+        . "test before a full bag."
     )
 
     A_Clipboard := summary
@@ -172,6 +213,8 @@ IntroPrompt()
         . "• Select a category with at least 6 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the exact position and size you will use later.`n`n"
+        . "You do not need to be pixel-perfect. Aim carefully at the Lv. dot; "
+        . "small 1-2 pixel pitch differences are normalized automatically.`n`n"
         . "Press Enter or click Continue."
     )
 

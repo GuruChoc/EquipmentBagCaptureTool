@@ -87,12 +87,14 @@ StartCalibration()
         . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    ; Proven successful movement used a 576 px drag with 140 px row spacing.
-    ; Four row spacings were 560 px, so Maple needed a movement factor of
-    ; 576 / 560 = 1.028571... . Apply that same ratio to the user's measured
-    ; row spacing so different resolutions/scaling remain supported.
+    ; Screenshot comparison measured Maple's actual drag response.
+    ; With a 136 px row spacing, four geometric rows are 544 px.
+    ; A 560 px commanded drag moved the content only about 505 px, while
+    ; about 561 px of content movement was required. That gives a target
+    ; commanded drag of about 622 px for a 544 px four-row geometry.
+    ; Scale that measured ratio to the user's current row spacing.
     baseFourRows := ySpacing * 4
-    movementDistance := Round(baseFourRows * 576 / 560)
+    movementDistance := Round(baseFourRows * 622 / 544)
 
     dragStartX := gridX3
     dragStartY := gridY1 + movementDistance
@@ -136,7 +138,7 @@ StartCalibration()
         . "Calculated drag: "
         . dragStartX . ", " . dragStartY
         . " to " . dragEndX . ", " . dragEndY . "`n"
-        . "Movement distance: " . movementDistance . " px (scaled from proven 576/560 ratio)`n`n"
+        . "Movement distance: " . movementDistance . " px (scaled from measured 622/544 ratio)`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
         . "Run EquipmentBagCaptureTool.ahk and perform a 12-item test first."

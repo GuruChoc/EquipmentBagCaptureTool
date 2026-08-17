@@ -34,12 +34,27 @@ global CompletedScreenshots := 0
 global CompletedMovements := 0
 global CaptureRunning := false
 
+SetTimer(ShowStartupMessage, -250)
+
 F8::StartEquipmentCapture()
 
 Esc::
 {
     ReleaseEverything()
     ExitApp
+}
+
+ShowStartupMessage()
+{
+    global APP_NAME
+
+    MsgBox(
+        "Equipment Bag Capture Tool is ready.`n`n"
+        . "Press F8 to start a capture.`n"
+        . "Press Esc to exit.`n`n"
+        . "Press Enter or click OK to close this window.",
+        APP_NAME
+    )
 }
 
 StartEquipmentCapture()
@@ -428,7 +443,7 @@ LowLevelClick(clickX, clickY)
     Sleep 220
     DllCall(
         "mouse_event", "UInt", 0x0004,
-        "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0
+        "UInt", 0, "UInt", 0, "UInt", 0, "UInt", 0, "UPtr", 0
     )
     Sleep 120
 }

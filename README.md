@@ -70,7 +70,7 @@ The tool is designed specifically for this view.
 ## 3. Calibrate
 
 1. Open the correct 3-column bag view described above.
-2. Select a category containing at least 12 items.
+2. Select a category containing at least **15 items** so the top-right and bottom-right / 15th-item padlocks are both visible.
 3. Put the list at the absolute top.
 4. Keep the Maple window in the exact position and size you will use later.
 5. Double-click `EquipmentBagCaptureCalibration.ahk`.
@@ -83,10 +83,12 @@ Calibration records:
 - top-middle equipment item centre
 - second-row left equipment item centre
 - popup close button
-- upward-drag start point
-- upward-drag end point
+- centre of the padlock on the **top-right equipment tile**
+- centre of the padlock on the **bottom-right / 15th equipment tile**
 
-The remaining grid coordinates are calculated from the measured spacing.
+The padlocks may be red or black. Their colour does not matter; they are used only as clear reference points.
+
+The remaining grid coordinates are calculated from the measured spacing. The movement calibration no longer asks you to guess drag start/end positions: the script uses the bottom-right padlock as the drag start and the top-right padlock as the drag end, preserving the proven upward-drag routine.
 
 Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.
 
@@ -94,13 +96,14 @@ Recalibrate whenever resolution, Windows display scaling, Maple window size, Map
 
 1. Start ShareX.
 2. Double-click `EquipmentBagCaptureTool.ahk`.
-3. Put the equipment list at the absolute top with no popup open.
-4. Press `F8` and enter `12`.
-5. Confirm exactly 12 screenshots were saved and all are unique.
-6. Reset the list to the absolute top.
-7. Press `F8` and enter `36`.
-8. Confirm exactly 36 screenshots were saved and two movements occurred.
-9. Check the screenshots for duplicates before attempting a full bag.
+3. Read the startup message, then press `F8` to start a capture.
+4. Put the equipment list at the absolute top with no popup open.
+5. Enter `12`.
+6. Confirm exactly 12 screenshots were saved and all are unique.
+7. Reset the list to the absolute top.
+8. Press `F8` and enter `36`.
+9. Confirm exactly 36 screenshots were saved and two movements occurred.
+10. Check the screenshots for duplicates before attempting a full bag.
 
 ## 5. Capture a full equipment bag
 
@@ -169,8 +172,8 @@ Start ShareX before pressing `F8`.
 
 ### Movement is wrong
 
-- confirm the drag start and endpoint were calibrated correctly
-- recalibrate with the bag at the absolute top
+- recalibrate and make sure you mark the **top-right padlock** and **bottom-right / 15th-item padlock** accurately
+- make sure the bag is at the absolute top during calibration
 - rerun the 36-item test before attempting another full bag
 
 ### A screenshot is duplicated
@@ -181,7 +184,8 @@ The game did not accept the equipment selection before ShareX captured the popup
 
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
-- assumes a 3-column x 4-row equipment grid
+- assumes a 3-column x 4-row equipment capture grid
+- movement calibration requires a category with at least 15 visible items
 - assumes one calibrated movement advances to the next group of items
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running

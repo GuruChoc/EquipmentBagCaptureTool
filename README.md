@@ -70,7 +70,7 @@ The tool is designed specifically for this view.
 ## 3. Calibrate
 
 1. Open the correct 3-column bag view described above.
-2. Select a category containing at least **15 items**.
+2. Select a category containing at least **6 items**.
 3. Put the list at the absolute top.
 4. Keep the Maple window in the exact position and size you will use later.
 5. Double-click `EquipmentBagCaptureCalibration.ahk`.
@@ -79,20 +79,26 @@ The tool is designed specifically for this view.
 
 For every equipment reference point, aim precisely at the **bottom-right corner of the tier badge**. The badge may show **T1, T2, T3 or T4** depending on the equipment; the tier value does not matter.
 
-Calibration records:
+Calibration records only:
 
 - bottom-right corner of the tier badge on the top-left equipment item
 - bottom-right corner of the tier badge on the top-middle equipment item
 - bottom-right corner of the tier badge on the second-row left equipment item
 - popup close button
-- bottom-right corner of the tier badge on the **top-right equipment tile**
-- bottom-right corner of the tier badge on the **bottom-right / 15th equipment tile**
 
 The first three tier-badge corners provide the equipment click positions and the horizontal/vertical grid spacing. The remaining grid click positions are calculated automatically from that measured spacing.
 
-The movement calibration uses the bottom-right / 15th-item tier-badge corner as the drag start and the top-right tier-badge corner as the drag end, preserving the proven upward-drag routine.
+### How scrolling is calculated
 
-Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.
+The movement distance is **not manually calibrated**. The script calculates it from the measured grid geometry:
+
+- drag X = calculated right-hand equipment column
+- drag end Y = measured top-row Y
+- drag start Y = top-row Y + **4 × measured row spacing**
+
+That means one movement is always exactly four equipment-row spacings. For example, if calibration measures a row spacing of 139 px, the movement distance is `4 × 139 = 556 px`.
+
+Because the row and column spacing are measured on the current PC during calibration, this method is not tied to one fixed resolution. A different resolution or scaling can produce different pixel spacing and the calculation will use those measured values. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
 
 ## 4. Mandatory test sequence
 
@@ -105,7 +111,7 @@ Recalibrate whenever resolution, Windows display scaling, Maple window size, Map
 7. Reset the list to the absolute top.
 8. Press `F8` and enter `36`.
 9. Confirm exactly 36 screenshots were saved and two movements occurred.
-10. Check the screenshots for duplicates before attempting a full bag.
+10. Check the screenshots for duplicates or skipped items before attempting a full bag.
 
 **Important:** pressing `Esc` at any time stops the current run **and closes `EquipmentBagCaptureTool.ahk` completely**. If you press `Esc`, restart `EquipmentBagCaptureTool.ahk` before trying another test or capture.
 
@@ -177,8 +183,9 @@ Start ShareX before pressing `F8`.
 
 ### Movement is wrong
 
-- recalibrate and mark the **bottom-right corners of the tier badges** on the top-right and bottom-right / 15th-item tiles accurately
-- make sure the bag is at the absolute top during calibration
+- make sure the first three tier-badge reference points were marked accurately
+- make sure the bag was at the absolute top during calibration
+- recalibrate after any resolution, scaling, Maple window size or position change
 - rerun the 36-item test before attempting another full bag
 
 ### I pressed Esc and F8 no longer works
@@ -194,8 +201,7 @@ The game did not accept the equipment selection before ShareX captured the popup
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
-- movement calibration requires a category with at least 15 visible items
-- assumes one calibrated movement advances to the next group of items
+- assumes one calculated four-row movement advances to the next group of items
 - uses ShareX `Ctrl+Shift+Z`
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment

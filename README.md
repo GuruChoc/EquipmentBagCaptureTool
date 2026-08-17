@@ -107,6 +107,8 @@ Recalibrate whenever resolution, Windows display scaling, Maple window size, Map
 9. Confirm exactly 36 screenshots were saved and two movements occurred.
 10. Check the screenshots for duplicates before attempting a full bag.
 
+**Important:** pressing `Esc` at any time stops the current run **and closes `EquipmentBagCaptureTool.ahk` completely**. If you press `Esc`, restart `EquipmentBagCaptureTool.ahk` before trying another test or capture.
+
 ## 5. Capture a full equipment bag
 
 1. Start ShareX and confirm its save folder.
@@ -120,7 +122,7 @@ Recalibrate whenever resolution, Windows display scaling, Maple window size, Map
 9. Read the summary and press **OK**.
 10. Do not touch the mouse or keyboard until the completion message appears.
 
-Press `Esc` to stop immediately. `Esc` closes the script, so restart it before another run.
+Press `Esc` to stop immediately. **Esc closes the AutoHotkey script completely**, so restart `EquipmentBagCaptureTool.ahk` before another run.
 
 ## Proven capture behaviour
 
@@ -178,6 +180,10 @@ Start ShareX before pressing `F8`.
 - recalibrate and mark the **bottom-right corners of the tier badges** on the top-right and bottom-right / 15th-item tiles accurately
 - make sure the bag is at the absolute top during calibration
 - rerun the 36-item test before attempting another full bag
+
+### I pressed Esc and F8 no longer works
+
+`Esc` exits `EquipmentBagCaptureTool.ahk` completely. Double-click `EquipmentBagCaptureTool.ahk` again, dismiss the startup message, then press `F8` when you are ready to start another capture.
 
 ### A screenshot is duplicated
 

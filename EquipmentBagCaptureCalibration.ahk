@@ -25,7 +25,7 @@ StartCalibration()
         . "• Click Edit Preset.`n"
         . "• In Manage Equipment, click the symbol in the bottom-right corner.`n"
         . "• Confirm the equipment bag is shown in 3 columns.`n"
-        . "• Select the equipment category you want to capture.`n"
+        . "• Select an equipment category with at least 15 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
         . "For each point, move the mouse to the requested position "
@@ -83,23 +83,44 @@ StartCalibration()
         . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    dragStart := CapturePoint(
-        "Movement start point",
+    topRightLock := CapturePoint(
+        "Top-right padlock",
         "First, manually close the equipment popup and make sure the list "
         . "is still at the absolute top.`n`n"
-        . "Place the mouse at the point where an upward drag should START."
+        . "Place the mouse in the CENTRE of the padlock on the TOP-RIGHT "
+        . "equipment tile.`n`n"
+        . "The padlock may be red or black."
     )
 
-    dragEnd := CapturePoint(
-        "Movement end point",
-        "Place the mouse at the point where the upward drag should END.`n`n"
+    bottomRightLock := CapturePoint(
+        "Bottom-right / 15th-item padlock",
+        "Place the mouse in the CENTRE of the padlock on the BOTTOM-RIGHT "
+        . "equipment tile (the 15th item).`n`n"
+        . "The padlock may be red or black.`n"
         . "Do not drag the list. Only position the pointer and press T."
     )
+
+    dragStart := bottomRightLock
+    dragEnd := topRightLock
 
     if dragEnd[2] >= dragStart[2]
     {
         MsgBox(
-            "The drag endpoint must be above the drag start point.`n`n"
+            "The top-right padlock must be above the bottom-right padlock.`n`n"
+            . "No configuration was saved. Run calibration again.",
+            APP_NAME
+        )
+        ExitApp
+    }
+
+    movementDistance := dragStart[2] - dragEnd[2]
+
+    if movementDistance < (ySpacing * 3)
+    {
+        MsgBox(
+            "The measured padlock distance looks too small.`n`n"
+            . "Top-right and bottom-right padlocks should be about four "
+            . "equipment rows apart.`n`n"
             . "No configuration was saved. Run calibration again.",
             APP_NAME
         )
@@ -138,9 +159,14 @@ StartCalibration()
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "
         . popupClose[1] . ", " . popupClose[2] . "`n"
-        . "Drag: "
+        . "Top-right padlock: "
+        . topRightLock[1] . ", " . topRightLock[2] . "`n"
+        . "Bottom-right padlock: "
+        . bottomRightLock[1] . ", " . bottomRightLock[2] . "`n"
+        . "Calculated drag: "
         . dragStart[1] . ", " . dragStart[2]
-        . " to " . dragEnd[1] . ", " . dragEnd[2] . "`n`n"
+        . " to " . dragEnd[1] . ", " . dragEnd[2] . "`n"
+        . "Movement distance: " . movementDistance . " px`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
         . "Run EquipmentBagCaptureTool.ahk and perform a 12-item test first."

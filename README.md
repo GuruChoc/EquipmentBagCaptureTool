@@ -108,12 +108,16 @@ The current PC's movement is calculated as:
 
 `round((4 × measured row spacing) × 622 / 544)`
 
-For example, with a measured row spacing of 136 px:
+The **mouse-down point stays at the calculated fifth-row position inside the equipment list**. Any extra correction distance is applied by extending the drag endpoint upward. This prevents the start point from drifting down into the lower UI where Maple may fail to grab the scrollable list.
 
-- four-row geometry = `4 × 136 = 544 px`
-- calculated drag = `622 px`
+For example, with a top-row reference of 360 px and row spacing of 139 px:
 
-This still adapts to different resolutions because the underlying row spacing is measured on the current PC. The correction ratio represents Maple's observed drag-to-scroll response and must still be validated with the 36-item test on a new setup. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
+- four-row geometry = `556 px`
+- calculated fifth-row drag start = `360 + 556 = 916 px`
+- scaled drag distance = about `636 px`
+- calculated drag end = `916 - 636 = 280 px`
+
+This still adapts to different resolutions because the underlying row spacing and top-row position are measured on the current PC. The correction ratio represents Maple's observed drag-to-scroll response and must still be validated on a new setup. **Recalibrate whenever resolution, Windows display scaling, Maple window size, Maple window position or the relevant game layout changes.**
 
 ## 4. Mandatory test sequence
 

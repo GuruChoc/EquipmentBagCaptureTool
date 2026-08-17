@@ -28,8 +28,8 @@ StartCalibration()
         . "• Select an equipment category with at least 6 items.`n"
         . "• Put the equipment list at the absolute top.`n"
         . "• Keep Maple in the position and size you will use later.`n`n"
-        . "For equipment reference points, aim precisely at the BOTTOM-RIGHT CORNER "
-        . "of the tier badge (T1, T2, T3 or T4).`n`n"
+        . "For equipment reference points, use the TIP OF THE GLOVE FINGER "
+        . "and place it directly over the DOT in 'Lv.'.`n`n"
         . "For each point, move the mouse to the requested position "
         . "and press T.`n`n"
         . "Press Esc at any time to cancel. Esc closes this calibration script completely.",
@@ -42,19 +42,19 @@ StartCalibration()
 
     topLeftRef := CapturePoint(
         "Grid reference 1 of 3",
-        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
+        "Place the TIP OF THE GLOVE FINGER directly over the DOT in 'Lv.' "
         . "on the TOP-LEFT equipment item."
     )
 
     topMiddleRef := CapturePoint(
         "Grid reference 2 of 3",
-        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
+        "Place the TIP OF THE GLOVE FINGER directly over the DOT in 'Lv.' "
         . "on the TOP-MIDDLE equipment item."
     )
 
     secondRowLeftRef := CapturePoint(
         "Grid reference 3 of 3",
-        "Place the mouse precisely on the BOTTOM-RIGHT CORNER of the tier badge "
+        "Place the TIP OF THE GLOVE FINGER directly over the DOT in 'Lv.' "
         . "on the LEFT equipment item in the SECOND ROW."
     )
 
@@ -65,8 +65,8 @@ StartCalibration()
     {
         MsgBox(
             "The recorded grid spacing is too small.`n`n"
-            . "Run calibration again and mark the requested tier badge "
-            . "corners accurately.",
+            . "Run calibration again and place the glove fingertip "
+            . "directly over the requested 'Lv.' dots.",
             APP_NAME
         )
         ExitApp
@@ -87,23 +87,15 @@ StartCalibration()
         . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    ; Screenshot comparison measured Maple's actual drag response.
-    ; With a 136 px row spacing, four geometric rows are 544 px.
-    ; A 560 px commanded drag moved the content only about 505 px, while
-    ; about 561 px of content movement was required. That gives a target
-    ; commanded drag of about 622 px for a 544 px four-row geometry.
-    ; Scale that measured ratio to the user's current row spacing.
-    baseFourRows := ySpacing * 4
-    movementDistance := Round(baseFourRows * 622 / 544)
+    ; Use the equipment grid itself as the ruler.
+    ; After row 4, move one more row pitch down to the calculated row-5
+    ; reference point, grab there, and drag upward exactly four row pitches.
+    movementDistance := ySpacing * 4
 
-    ; Keep the mouse-down point at the calculated fifth-row position so it
-    ; remains safely inside the scrollable equipment list. Apply any extra
-    ; correction distance by extending the drag endpoint upward instead of
-    ; pushing the start point into the bottom UI area.
     dragStartX := gridX3
-    dragStartY := gridY1 + baseFourRows
+    dragStartY := gridY1 + movementDistance
     dragEndX := gridX3
-    dragEndY := dragStartY - movementDistance
+    dragEndY := gridY1
 
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
@@ -138,14 +130,15 @@ StartCalibration()
         . gridY3 . ", " . gridY4 . "`n"
         . "Popup close: "
         . popupClose[1] . ", " . popupClose[2] . "`n"
-        . "Base four-row distance: " . baseFourRows . " px`n"
+        . "Calculated row-5 grab point: "
+        . dragStartX . ", " . dragStartY . "`n"
         . "Calculated drag: "
         . dragStartX . ", " . dragStartY
         . " to " . dragEndX . ", " . dragEndY . "`n"
-        . "Movement distance: " . movementDistance . " px (scaled from measured 622/544 ratio)`n`n"
+        . "Movement distance: " . movementDistance . " px (4 measured row pitches)`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
-        . "Run EquipmentBagCaptureTool.ahk and perform a 12-item test first."
+        . "Run EquipmentBagCaptureTool.ahk and test one movement before a full run."
     )
 
     A_Clipboard := summary

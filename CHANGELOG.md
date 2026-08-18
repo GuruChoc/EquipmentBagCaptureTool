@@ -13,6 +13,7 @@ Calibration, scrolling and usability improvements.
 - Added a live capture progress counter showing captured items and movement progress.
 - Preserves the proven two-click equipment selection, ShareX capture and held stepped-drag behaviour.
 - Validated with a 36-item multi-screen test and a 134-item full capture requiring 11 movements.
+- Subsequently stress-tested with a **300+ item full equipment bag** to validate long-run scrolling and cumulative-drift behaviour.
 - Improved handling and documentation for incomplete final screens and bottom-of-list bounce-back behaviour.
 - Updated README calibration and testing instructions.
 

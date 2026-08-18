@@ -159,13 +159,15 @@ The capture side retains the behaviour from the final successful `MapleRingTest.
 - list movement uses a **single held drag**
 - the script waits **800 ms after each movement** before continuing
 
-The historical successful full-bag test reported:
+The current v1.0.1 capture/calibration path has now been validated with:
 
-- Requested equipment items: **249**
-- Screenshot commands sent: **249**
-- Expected movements: **20**
-- Movements performed: **20**
-- The run reached the bottom of the bag correctly
+- a **36-item** multi-screen test
+- a **134-item** full capture requiring **11 movements**
+- a **300+ item** full-bag test to exercise long-run scrolling and cumulative drift
+
+The earlier proven capture routine was also successfully tested with **249 items**, producing **249 screenshot commands** and **20 equipment-list movements** while reaching the bottom of the bag correctly.
+
+The 300+ item validation is the current long-run stress test for the alternating **576 / 577 px** movement pattern and human-tolerant calibration.
 
 ## What the completion report proves
 

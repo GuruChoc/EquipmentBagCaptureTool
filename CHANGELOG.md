@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.0.2 — 2026-08-22
+
+Faster capture and safer unattended runs.
+
+- Reduced the ShareX post-capture wait from **1400 ms to 850 ms** while preserving the proven two-click item-selection and scrolling behaviour.
+- Added a physical mouse-movement lock during capture so accidental mouse movement cannot pull the pointer away from the scripted coordinates.
+- Added a safe `Esc` stop path that unlocks the mouse and reports completed screenshots, completed movements and the next item number as a checkpoint.
+- Retains the live top-left capture/movement counter.
+- Keeps the validated human-tolerant `Lv.` calibration and alternating **576 / 577 px** scrolling unchanged.
+- Validated the faster **850 ms** timing with a **242-item** run completing **242 screenshot commands and 20 movements**.
+- Validated **850 ms + mouse-movement lock** with a **201-item** run completing **201 screenshot commands and 16 movements**.
+- Verified that 201-item run at file level: **201 PNG files saved and 0 duplicate CRC32 groups**.
+- Automatic resume is not implemented; the safe-stop next-item number is a checkpoint only.
+
 ## v1.0.1 — 2026-08-18
 
 Calibration, scrolling and usability improvements.

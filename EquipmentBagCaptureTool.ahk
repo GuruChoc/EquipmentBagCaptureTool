@@ -34,6 +34,9 @@ global ExpectedMovements := 0
 global CompletedScreenshots := 0
 global CompletedMovements := 0
 global CaptureRunning := false
+global StopRequested := false
+
+global SHAREX_POST_CAPTURE_DELAY := 850
 
 SetTimer(ShowStartupMessage, -250)
 
@@ -41,6 +44,18 @@ F8::StartEquipmentCapture()
 
 Esc::
 {
+    global CaptureRunning
+    global StopRequested
+
+    if CaptureRunning
+    {
+        StopRequested := true
+        UnlockUserMouse()
+        ReleaseEverything()
+        return
+    }
+
+    UnlockUserMouse()
     ToolTip
     ReleaseEverything()
     ExitApp
@@ -49,12 +64,18 @@ Esc::
 ShowStartupMessage()
 {
     global APP_NAME
+    global SHAREX_POST_CAPTURE_DELAY
 
     MsgBox(
         "Equipment Bag Capture Tool is ready.`n`n"
-        . "Press F8 to start a capture.`n"
-        . "Press Esc to stop and exit the script completely.`n`n"
-        . "If you press Esc, restart EquipmentBagCaptureTool.ahk before trying again.`n`n"
+        . "Press F8 to start a capture.`n`n"
+        . "During capture:`n"
+        . "• Physical mouse movement is locked.`n"
+        . "• The script can still move and click the mouse normally.`n"
+        . "• A live counter appears in the top-left corner.`n"
+        . "• Press Esc for a safe stop and checkpoint report.`n`n"
+        . "ShareX post-capture wait: "
+        . SHAREX_POST_CAPTURE_DELAY . " ms`n`n"
         . "Press Enter or click OK to close this window.",
         APP_NAME
     )
@@ -72,8 +93,10 @@ StartEquipmentCapture()
     global CompletedScreenshots
     global CompletedMovements
     global CaptureRunning
+    global StopRequested
     global CALIBRATED_SCREEN_WIDTH
     global CALIBRATED_SCREEN_HEIGHT
+    global SHAREX_POST_CAPTURE_DELAY
 
     if CaptureRunning
         return
@@ -174,7 +197,8 @@ StartEquipmentCapture()
         "Ready to capture the equipment bag.`n`n"
         . "Equipment items: " . RequestedItems . "`n"
         . "Items per screen: " . ITEMS_PER_SCREEN . "`n"
-        . "Required movements: " . ExpectedMovements . "`n`n"
+        . "Required movements: " . ExpectedMovements . "`n"
+        . "ShareX wait: " . SHAREX_POST_CAPTURE_DELAY . " ms`n`n"
         . "Before starting:`n"
         . "• ShareX is ready to capture the saved popup region.`n"
         . "• Maple is in Preset → Chapter → Chapter Hunt → Edit Preset.`n"
@@ -182,11 +206,10 @@ StartEquipmentCapture()
         . "• The correct equipment category is selected.`n"
         . "• The equipment list is at the absolute top.`n"
         . "• No equipment popup is currently open.`n"
-        . "• Maple is in its calibrated position and size.`n"
-        . "• Do not touch the mouse or keyboard.`n`n"
-        . "A small live counter will appear in the top-left corner.`n`n"
-        . "Press Esc at any time to stop and exit the script completely.`n"
-        . "If you do, restart EquipmentBagCaptureTool.ahk before trying again.",
+        . "• Maple is in its calibrated position and size.`n`n"
+        . "During capture, physical mouse movement is locked.`n"
+        . "Do not click the mouse or use other keyboard keys while it runs.`n"
+        . "Press Esc if you need to stop safely.",
         APP_NAME,
         "OKCancel Icon!"
     )
@@ -198,12 +221,16 @@ StartEquipmentCapture()
 
     CompletedScreenshots := 0
     CompletedMovements := 0
+    StopRequested := false
     CaptureRunning := true
+
+    LockUserMouse()
     UpdateProgress()
 
     if !ActivateMaple()
     {
         CaptureRunning := false
+        UnlockUserMouse()
         ToolTip
         MsgBox("Maple could not be activated.", APP_NAME)
         return
@@ -218,8 +245,6 @@ StartEquipmentCapture()
         itemsThisScreen := Min(ITEMS_PER_SCREEN, remainingItems)
         startGridRow := 1
 
-        ; At the bottom Maple clamps the final incomplete screen. The new
-        ; items therefore occupy the bottom rows of the visible 4-row grid.
         if screenNumber > 1 && remainingItems < ITEMS_PER_SCREEN
         {
             rowsNeeded := Ceil(itemsThisScreen / 3)
@@ -229,21 +254,36 @@ StartEquipmentCapture()
         if !CaptureItems(itemsThisScreen, startGridRow)
         {
             CaptureRunning := false
+            UnlockUserMouse()
             ToolTip
+            return
+        }
+
+        if StopRequested
+        {
+            CaptureRunning := false
+            UnlockUserMouse()
+            ShowStoppedReport()
             return
         }
 
         remainingItems -= itemsThisScreen
 
-        ; Never move after the final batch. A bottom-of-list elastic bounce
-        ; is harmless on the last required movement because capture resumes
-        ; only after Maple has settled.
         if remainingItems > 0
         {
             if !MoveOnce()
             {
                 CaptureRunning := false
+                UnlockUserMouse()
                 ToolTip
+                return
+            }
+
+            if StopRequested
+            {
+                CaptureRunning := false
+                UnlockUserMouse()
+                ShowStoppedReport()
                 return
             }
 
@@ -252,6 +292,7 @@ StartEquipmentCapture()
     }
 
     CaptureRunning := false
+    UnlockUserMouse()
     ToolTip
     ShowCompletionReport()
 }
@@ -311,6 +352,7 @@ CaptureItems(itemsToCapture, startGridRow := 1)
     global POPUP_CLOSE_X
     global POPUP_CLOSE_Y
     global CompletedScreenshots
+    global StopRequested
 
     Loop itemsToCapture
     {
@@ -338,6 +380,9 @@ CaptureItems(itemsToCapture, startGridRow := 1)
         TriggerShareX()
         CompletedScreenshots += 1
         UpdateProgress()
+
+        if StopRequested
+            return true
     }
 
     if !ActivateMaple()
@@ -365,8 +410,12 @@ MoveOnce()
 {
     global APP_NAME
     global CompletedMovements
+    global StopRequested
     global DRAG_SHORT_DISTANCE
     global DRAG_LONG_DISTANCE
+
+    if StopRequested
+        return true
 
     if !ActivateMaple()
     {
@@ -377,7 +426,6 @@ MoveOnce()
         return false
     }
 
-    ; Movement 1 = short, movement 2 = long, then alternate.
     movementNumber := CompletedMovements + 1
     movementDistance := Mod(movementNumber, 2) = 1
         ? DRAG_SHORT_DISTANCE
@@ -427,10 +475,12 @@ UpdateProgress()
     global ExpectedMovements
     global CompletedScreenshots
     global CompletedMovements
+    global SHAREX_POST_CAPTURE_DELAY
 
     ToolTip(
         "Captured: " . CompletedScreenshots . " / " . RequestedItems . "`n"
-        . "Movements: " . CompletedMovements . " / " . ExpectedMovements,
+        . "Movements: " . CompletedMovements . " / " . ExpectedMovements . "`n"
+        . "ShareX: " . SHAREX_POST_CAPTURE_DELAY . " ms",
         20,
         20
     )
@@ -457,10 +507,12 @@ ActivateMaple()
 
 TriggerShareX()
 {
+    global SHAREX_POST_CAPTURE_DELAY
+
     ReleaseKeyboard()
     Sleep 100
     SendEvent "^+z"
-    Sleep 1400
+    Sleep SHAREX_POST_CAPTURE_DELAY
     ReleaseKeyboard()
 }
 
@@ -481,26 +533,79 @@ LowLevelClick(clickX, clickY)
     Sleep 120
 }
 
+LockUserMouse()
+{
+    BlockInput "MouseMove"
+}
+
+UnlockUserMouse()
+{
+    try BlockInput "MouseMoveOff"
+}
+
+ShowStoppedReport()
+{
+    global APP_NAME
+    global RequestedItems
+    global CompletedScreenshots
+    global CompletedMovements
+    global ExpectedMovements
+    global SHAREX_POST_CAPTURE_DELAY
+
+    ToolTip
+
+    nextItem := Min(RequestedItems, CompletedScreenshots + 1)
+
+    report := (
+        "CAPTURE STOPPED SAFELY.`n`n"
+        . "Requested equipment items: " . RequestedItems . "`n"
+        . "Screenshot commands completed: " . CompletedScreenshots . "`n"
+        . "Next item number would be: " . nextItem . "`n`n"
+        . "Expected movements: " . ExpectedMovements . "`n"
+        . "Movements completed: " . CompletedMovements . "`n`n"
+        . "ShareX post-capture wait: " . SHAREX_POST_CAPTURE_DELAY . " ms`n`n"
+        . "Automatic resume is not implemented.`n"
+        . "Treat the next-item number as a checkpoint."
+    )
+
+    A_Clipboard := report
+
+    MsgBox(
+        report
+        . "`n`nThe stop report has been copied to the clipboard."
+        . "`n`nPress OK to close the script.",
+        APP_NAME
+    )
+
+    ReleaseEverything()
+    ExitApp
+}
+
 ShowCompletionReport()
 {
     global APP_NAME
     global RequestedItems
     global CompletedScreenshots
     global CompletedMovements
+    global ExpectedMovements
+    global SHAREX_POST_CAPTURE_DELAY
 
-    expectedMovements := Max(0, Ceil(RequestedItems / 12) - 1)
+    ToolTip
 
     report := (
         "Finished.`n`n"
         . "Requested equipment items: " . RequestedItems . "`n"
         . "Screenshot commands sent: " . CompletedScreenshots . "`n`n"
-        . "Expected movements: " . expectedMovements . "`n"
-        . "Movements performed: " . CompletedMovements
+        . "Expected movements: " . ExpectedMovements . "`n"
+        . "Movements performed: " . CompletedMovements . "`n`n"
+        . "ShareX post-capture wait: " . SHAREX_POST_CAPTURE_DELAY . " ms"
     )
 
     A_Clipboard := report
     MsgBox(
-        report . "`n`nThe result has been copied to the clipboard.",
+        report
+        . "`n`nThe result has been copied to the clipboard."
+        . "`n`nFor an important run, also verify the actual screenshot file count and check for duplicates.",
         APP_NAME
     )
 }

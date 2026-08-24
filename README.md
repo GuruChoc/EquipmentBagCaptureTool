@@ -35,8 +35,9 @@ winget install --id ShareX.ShareX --exact
 - `EquipmentBagCaptureCalibration.ahk` — coordinate calibration wizard
 - `Check_Screenshot_Folder_CRC.bat` — optional post-run screenshot count and CRC32 duplicate checker
 - `EquipmentBagCapture.ini` — generated local calibration file
+- `EquipmentBagCaptureCheckpoint.ini` — generated local safe-stop/resume checkpoint
 
-`EquipmentBagCapture.ini` is deliberately excluded from this repository because its coordinates are specific to one PC/setup.
+Both INI files are deliberately excluded from the repository because they contain local runtime state specific to one PC/run.
 
 ## 1. Prepare ShareX
 
@@ -126,19 +127,43 @@ The 850 ms timing was validated with:
 
 The shorter delay saves significant time on large bags without changing the proven click/scroll mechanics.
 
-## 6. Mouse-movement lock and safe Esc stop
+## 6. Mouse-movement lock, safe Esc stop and F9 resume
 
 During capture, physical mouse movement is locked so an accidental mouse movement cannot pull the pointer away from the scripted coordinates. The script's own mouse movement and clicks continue normally.
 
 Do not deliberately click the mouse or use other keyboard keys while a capture is running.
 
-Press **Esc** if you need to stop. The tool unlocks mouse movement and shows a safe-stop report containing:
+### Safe stop
 
-- screenshot commands completed
-- movements completed
-- next item number as a checkpoint
+Press **Esc** if you need to stop. The tool:
 
-Automatic resume is **not** implemented. The next-item number is a checkpoint only; a new capture still requires the list to be positioned correctly before starting again.
+- safely stops at the current checkpoint
+- unlocks physical mouse movement
+- reports screenshot commands completed
+- reports movements completed
+- reports the next item number
+- records whether the last equipment popup is still open
+- saves the checkpoint to `EquipmentBagCaptureCheckpoint.ini`
+- closes the script after you dismiss the report
+
+### Resume
+
+After pressing Esc:
+
+1. **Do not move or scroll the Maple equipment bag.**
+2. Do not manually close the equipment popup left by the safe stop.
+3. Leave the same equipment category selected.
+4. Restart `EquipmentBagCaptureTool.ahk`.
+5. The startup message will show the saved checkpoint.
+6. Press **F9**.
+7. Confirm the resume details.
+8. Leave the mouse and keyboard alone while the capture continues.
+
+The tool resumes from the saved next item, continues the existing movement sequence and clears `EquipmentBagCaptureCheckpoint.ini` after a successful completion.
+
+If you press **F8** while a checkpoint exists, the tool warns that starting a new capture will delete the saved checkpoint and asks for confirmation first.
+
+Resume depends on Maple still being at the same equipment category and scroll position left by the safe stop. If that state has changed, do not resume; start a clean capture from the absolute top instead.
 
 ## 7. Test before a full run
 
@@ -150,6 +175,7 @@ After calibrating, use a small category first.
 4. Press `F8` and enter `12` to confirm item clicking and ShareX capture.
 5. Reset the list to the absolute top.
 6. Run a multi-screen test such as `36` items and check for duplicates or skipped items.
+7. For a resume test, press `Esc` partway through a multi-screen run, leave Maple untouched, restart the script and press `F9`.
 
 ## 8. Capture a full equipment bag
 
@@ -183,6 +209,8 @@ Validation history includes:
 - earlier successful **249-item** capture with **20 movements**
 - v1.0.2 faster-timing **242-item** test with **20 movements**
 - v1.0.2 input-lock **201-item** test with **16 movements** and **0 duplicate CRC32 groups**
+- v1.0.2 persistent resume test: stopped after item **19**, saved item **20** as the next checkpoint, closed/reopened the script, resumed with `F9`, and finished **36/36 screenshots with 2/2 movements**
+- combined stop/resume output verification: **36 PNG files and 0 duplicate CRC32 groups**
 
 ## Verify a completed screenshot folder
 
@@ -215,7 +243,7 @@ Install AutoHotkey v2. The scripts are not compatible with AutoHotkey v1.
 
 ### ShareX is not running
 
-Start ShareX before pressing `F8`.
+Start ShareX before pressing `F8` or `F9`.
 
 ### No screenshots are saved
 
@@ -233,14 +261,22 @@ Start ShareX before pressing `F8`.
 
 ### Movement is wrong
 
-- make sure the list was at the absolute top during calibration and at the start of the run
+- make sure the list was at the absolute top during calibration and at the start of a new run
 - recalibrate after any resolution, scaling, Maple window size or position change
 - on the validated layout, movement should remain **576 / 577 px**
 - test a small multi-screen category before a full bag
 
 ### I pressed Esc
 
-Esc safely stops the run, unlocks mouse movement and displays a checkpoint report. Automatic resume is not implemented yet.
+Esc safely stops the run, unlocks mouse movement, saves the resume checkpoint and displays the next item number. Leave Maple untouched, restart the same AHK and press **F9** to resume.
+
+### F9 says there is no checkpoint
+
+A successful completion clears the checkpoint automatically. A new F8 capture also deletes an old checkpoint after confirmation. If the checkpoint is gone, reset the bag to the absolute top and start a new capture.
+
+### I moved or scrolled Maple after pressing Esc
+
+Do not use F9 resume from a changed game state. Reset the bag to the absolute top and start a new F8 capture instead.
 
 ### A screenshot is duplicated
 
@@ -253,7 +289,7 @@ The game may not have accepted an equipment selection before ShareX captured the
 - assumes a 3-column x 4-row equipment capture grid
 - uses ShareX `Ctrl+Shift+Z`
 - physical mouse movement is locked during capture, but users should still avoid clicking or other keyboard input
-- automatic resume after an interrupted run is not implemented
+- resume requires the same Maple equipment category and scroll position to remain unchanged after safe stop
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment
 

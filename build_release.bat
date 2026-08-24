@@ -53,5 +53,6 @@ echo Release package created successfully:
 echo %CD%\%ZIP%
 echo.
 echo EquipmentBagCapture.ini is intentionally NOT included.
+echo EquipmentBagCaptureCheckpoint.ini is intentionally NOT included.
 echo.
 pause

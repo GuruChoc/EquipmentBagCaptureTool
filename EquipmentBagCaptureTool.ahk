@@ -7,6 +7,7 @@ SendMode "Event"
 
 global APP_NAME := "Equipment Bag Capture Tool"
 global CONFIG_FILE := A_ScriptDir . "\EquipmentBagCapture.ini"
+global CHECKPOINT_FILE := A_ScriptDir . "\EquipmentBagCaptureCheckpoint.ini"
 
 global MAPLE_TITLE := ""
 global MapleHwnd := 0
@@ -35,12 +36,14 @@ global CompletedScreenshots := 0
 global CompletedMovements := 0
 global CaptureRunning := false
 global StopRequested := false
+global StopPopupOpen := false
 
 global SHAREX_POST_CAPTURE_DELAY := 850
 
 SetTimer(ShowStartupMessage, -250)
 
 F8::StartEquipmentCapture()
+F9::ResumeSavedCapture()
 
 Esc::
 {
@@ -64,19 +67,49 @@ Esc::
 ShowStartupMessage()
 {
     global APP_NAME
+    global CHECKPOINT_FILE
     global SHAREX_POST_CAPTURE_DELAY
+
+    checkpointText := ""
+
+    if FileExist(CHECKPOINT_FILE)
+    {
+        try
+        {
+            requested := IniRead(CHECKPOINT_FILE, "Resume", "RequestedItems") + 0
+            completed := IniRead(CHECKPOINT_FILE, "Resume", "CompletedScreenshots") + 0
+            nextItem := IniRead(CHECKPOINT_FILE, "Resume", "NextItem") + 0
+            movements := IniRead(CHECKPOINT_FILE, "Resume", "CompletedMovements") + 0
+
+            checkpointText := (
+                "`nSAVED RESUME CHECKPOINT FOUND:`n"
+                . "Captured: " . completed . " / " . requested . "`n"
+                . "Next item: " . nextItem . "`n"
+                . "Movements completed: " . movements . "`n`n"
+                . "Press F9 to resume.`n"
+            )
+        }
+        catch
+        {
+            checkpointText := (
+                "`nA checkpoint file exists but could not be read.`n"
+                . "Press F8 to start a new capture and replace it.`n"
+            )
+        }
+    }
 
     MsgBox(
         "Equipment Bag Capture Tool is ready.`n`n"
-        . "Press F8 to start a capture.`n`n"
+        . "Press F8 to start a NEW capture.`n"
+        . "Press F9 to RESUME a saved safe-stop checkpoint.`n`n"
         . "During capture:`n"
         . "• Physical mouse movement is locked.`n"
-        . "• The script can still move and click the mouse normally.`n"
         . "• A live counter appears in the top-left corner.`n"
-        . "• Press Esc for a safe stop and checkpoint report.`n`n"
-        . "ShareX post-capture wait: "
-        . SHAREX_POST_CAPTURE_DELAY . " ms`n`n"
-        . "Press Enter or click OK to close this window.",
+        . "• Press Esc for a safe stop.`n"
+        . "• The safe stop is saved to disk before the script exits.`n"
+        . checkpointText
+        . "`nShareX post-capture wait: "
+        . SHAREX_POST_CAPTURE_DELAY . " ms",
         APP_NAME
     )
 }
@@ -85,6 +118,7 @@ StartEquipmentCapture()
 {
     global APP_NAME
     global CONFIG_FILE
+    global CHECKPOINT_FILE
     global MAPLE_TITLE
     global MapleHwnd
     global ITEMS_PER_SCREEN
@@ -94,6 +128,7 @@ StartEquipmentCapture()
     global CompletedMovements
     global CaptureRunning
     global StopRequested
+    global StopPopupOpen
     global CALIBRATED_SCREEN_WIDTH
     global CALIBRATED_SCREEN_HEIGHT
     global SHAREX_POST_CAPTURE_DELAY
@@ -101,68 +136,24 @@ StartEquipmentCapture()
     if CaptureRunning
         return
 
-    if !FileExist(CONFIG_FILE)
-    {
-        MsgBox(
-            "EquipmentBagCapture.ini was not found.`n`n"
-            . "Run EquipmentBagCaptureCalibration.ahk first.",
-            APP_NAME
-        )
-        return
-    }
-
-    try
-        LoadConfiguration()
-    catch as error
-    {
-        MsgBox(
-            "The calibration file could not be read.`n`n"
-            . error.Message . "`n`n"
-            . "Run EquipmentBagCaptureCalibration.ahk again.",
-            APP_NAME
-        )
-        return
-    }
-
-    if (
-        A_ScreenWidth != CALIBRATED_SCREEN_WIDTH
-        || A_ScreenHeight != CALIBRATED_SCREEN_HEIGHT
-    )
+    if FileExist(CHECKPOINT_FILE)
     {
         answer := MsgBox(
-            "The current screen size differs from the calibration.`n`n"
-            . "Calibrated: "
-            . CALIBRATED_SCREEN_WIDTH . " x "
-            . CALIBRATED_SCREEN_HEIGHT . "`n"
-            . "Current: "
-            . A_ScreenWidth . " x "
-            . A_ScreenHeight . "`n`n"
-            . "Continuing may click the wrong locations.`n`n"
-            . "Continue anyway?",
+            "A saved resume checkpoint already exists.`n`n"
+            . "Starting a new capture will DELETE that checkpoint.`n`n"
+            . "Continue with a new capture?",
             APP_NAME,
             "YesNo Icon!"
         )
 
         if answer != "Yes"
             return
+
+        DeleteCheckpoint()
     }
 
-    if !ProcessExist("ShareX.exe")
-    {
-        MsgBox("ShareX is not running.", APP_NAME)
+    if !PrepareEnvironment()
         return
-    }
-
-    MapleHwnd := WinExist(MAPLE_TITLE)
-
-    if !MapleHwnd
-    {
-        MsgBox(
-            "The MapleStory: Idle RPG PC client could not be found.",
-            APP_NAME
-        )
-        return
-    }
 
     itemInput := InputBox(
         "Enter the total number of equipment items to capture.",
@@ -201,15 +192,15 @@ StartEquipmentCapture()
         . "ShareX wait: " . SHAREX_POST_CAPTURE_DELAY . " ms`n`n"
         . "Before starting:`n"
         . "• ShareX is ready to capture the saved popup region.`n"
-        . "• Maple is in Preset → Chapter → Chapter Hunt → Edit Preset.`n"
         . "• The 3-column equipment bag view is open.`n"
         . "• The correct equipment category is selected.`n"
         . "• The equipment list is at the absolute top.`n"
         . "• No equipment popup is currently open.`n"
         . "• Maple is in its calibrated position and size.`n`n"
         . "During capture, physical mouse movement is locked.`n"
-        . "Do not click the mouse or use other keyboard keys while it runs.`n"
-        . "Press Esc if you need to stop safely.",
+        . "Press Esc if you need to stop safely.`n`n"
+        . "After a safe stop, DO NOT move or scroll the bag.`n"
+        . "Restart this same script and press F9 to resume.",
         APP_NAME,
         "OKCancel Icon!"
     )
@@ -222,10 +213,11 @@ StartEquipmentCapture()
     CompletedScreenshots := 0
     CompletedMovements := 0
     StopRequested := false
+    StopPopupOpen := false
     CaptureRunning := true
 
     LockUserMouse()
-    UpdateProgress()
+    UpdateProgress("NEW CAPTURE")
 
     if !ActivateMaple()
     {
@@ -251,6 +243,8 @@ StartEquipmentCapture()
             startGridRow := 5 - rowsNeeded
         }
 
+        StopPopupOpen := false
+
         if !CaptureItems(itemsThisScreen, startGridRow)
         {
             CaptureRunning := false
@@ -261,9 +255,7 @@ StartEquipmentCapture()
 
         if StopRequested
         {
-            CaptureRunning := false
-            UnlockUserMouse()
-            ShowStoppedReport()
+            HandleSafeStop(StopPopupOpen)
             return
         }
 
@@ -271,6 +263,8 @@ StartEquipmentCapture()
 
         if remainingItems > 0
         {
+            StopPopupOpen := false
+
             if !MoveOnce()
             {
                 CaptureRunning := false
@@ -281,9 +275,7 @@ StartEquipmentCapture()
 
             if StopRequested
             {
-                CaptureRunning := false
-                UnlockUserMouse()
-                ShowStoppedReport()
+                HandleSafeStop(false)
                 return
             }
 
@@ -294,7 +286,264 @@ StartEquipmentCapture()
     CaptureRunning := false
     UnlockUserMouse()
     ToolTip
-    ShowCompletionReport()
+    DeleteCheckpoint()
+    ShowCompletionReport(false)
+}
+
+ResumeSavedCapture()
+{
+    global APP_NAME
+    global CHECKPOINT_FILE
+    global RequestedItems
+    global ExpectedMovements
+    global CompletedScreenshots
+    global CompletedMovements
+    global CaptureRunning
+    global StopRequested
+    global StopPopupOpen
+    global POPUP_CLOSE_X
+    global POPUP_CLOSE_Y
+
+    if CaptureRunning
+        return
+
+    if !FileExist(CHECKPOINT_FILE)
+    {
+        MsgBox(
+            "No saved resume checkpoint was found.`n`n"
+            . "Press F8 to start a new capture.",
+            APP_NAME
+        )
+        return
+    }
+
+    if !PrepareEnvironment()
+        return
+
+    try
+    {
+        RequestedItems := IniRead(CHECKPOINT_FILE, "Resume", "RequestedItems") + 0
+        ExpectedMovements := IniRead(CHECKPOINT_FILE, "Resume", "ExpectedMovements") + 0
+        CompletedScreenshots := IniRead(CHECKPOINT_FILE, "Resume", "CompletedScreenshots") + 0
+        CompletedMovements := IniRead(CHECKPOINT_FILE, "Resume", "CompletedMovements") + 0
+        nextItem := IniRead(CHECKPOINT_FILE, "Resume", "NextItem") + 0
+        popupOpen := IniRead(CHECKPOINT_FILE, "Resume", "PopupOpen") + 0
+    }
+    catch as error
+    {
+        MsgBox(
+            "The saved checkpoint could not be read.`n`n"
+            . error.Message,
+            APP_NAME
+        )
+        return
+    }
+
+    if (
+        RequestedItems < 1
+        || CompletedScreenshots < 0
+        || CompletedScreenshots > RequestedItems
+        || nextItem != CompletedScreenshots + 1
+        || CompletedMovements < 0
+        || CompletedMovements > ExpectedMovements
+    )
+    {
+        MsgBox(
+            "The saved checkpoint is invalid or inconsistent.`n`n"
+            . "Do not resume from it.",
+            APP_NAME
+        )
+        return
+    }
+
+    if CompletedScreenshots >= RequestedItems
+    {
+        MsgBox(
+            "The saved checkpoint already shows the capture as complete.`n`n"
+            . "Delete the checkpoint by starting a new capture with F8.",
+            APP_NAME
+        )
+        return
+    }
+
+    answer := MsgBox(
+        "Resume saved capture?`n`n"
+        . "Requested items: " . RequestedItems . "`n"
+        . "Already captured: " . CompletedScreenshots . "`n"
+        . "Next item: " . nextItem . "`n"
+        . "Movements completed: "
+        . CompletedMovements . " / " . ExpectedMovements . "`n`n"
+        . "IMPORTANT:`n"
+        . "Maple must still be on the SAME equipment category and at the SAME scroll position left by Esc.`n"
+        . "Do not manually close the popup or move the list before resuming.`n`n"
+        . "Press OK to continue from item " . nextItem . ".",
+        APP_NAME,
+        "OKCancel Icon!"
+    )
+
+    if answer != "OK"
+        return
+
+    KeyWait "F9"
+
+    StopRequested := false
+    StopPopupOpen := false
+    CaptureRunning := true
+    LockUserMouse()
+    UpdateProgress("RESUME")
+
+    if !ActivateMaple()
+    {
+        CaptureRunning := false
+        UnlockUserMouse()
+        ToolTip
+        MsgBox("Maple could not be activated.", APP_NAME)
+        return
+    }
+
+    if popupOpen
+    {
+        LowLevelClick(POPUP_CLOSE_X, POPUP_CLOSE_Y)
+        Sleep 350
+    }
+
+    while CompletedScreenshots < RequestedItems
+    {
+        nextItem := CompletedScreenshots + 1
+        batchStart := (CompletedMovements * 12) + 1
+        batchRemaining := RequestedItems - batchStart + 1
+        batchItems := Min(12, batchRemaining)
+        batchEnd := batchStart + batchItems - 1
+
+        if nextItem > batchEnd
+        {
+            StopPopupOpen := false
+
+            if !MoveOnce()
+            {
+                CaptureRunning := false
+                UnlockUserMouse()
+                ToolTip
+                return
+            }
+
+            if StopRequested
+            {
+                HandleSafeStop(false)
+                return
+            }
+
+            continue
+        }
+
+        startGridRow := 1
+
+        if CompletedMovements > 0 && batchItems < 12
+        {
+            rowsNeeded := Ceil(batchItems / 3)
+            startGridRow := 5 - rowsNeeded
+        }
+
+        startPosition := nextItem - batchStart + 1
+        itemsToCapture := batchEnd - nextItem + 1
+
+        StopPopupOpen := false
+
+        if !CaptureResumeRange(startPosition, itemsToCapture, startGridRow)
+        {
+            CaptureRunning := false
+            UnlockUserMouse()
+            ToolTip
+            return
+        }
+
+        if StopRequested
+        {
+            HandleSafeStop(StopPopupOpen)
+            return
+        }
+    }
+
+    CaptureRunning := false
+    UnlockUserMouse()
+    ToolTip
+    DeleteCheckpoint()
+    ShowCompletionReport(true)
+}
+
+PrepareEnvironment()
+{
+    global APP_NAME
+    global CONFIG_FILE
+    global MAPLE_TITLE
+    global MapleHwnd
+    global CALIBRATED_SCREEN_WIDTH
+    global CALIBRATED_SCREEN_HEIGHT
+
+    if !FileExist(CONFIG_FILE)
+    {
+        MsgBox(
+            "EquipmentBagCapture.ini was not found.`n`n"
+            . "Run EquipmentBagCaptureCalibration.ahk first.",
+            APP_NAME
+        )
+        return false
+    }
+
+    try
+        LoadConfiguration()
+    catch as error
+    {
+        MsgBox(
+            "The calibration file could not be read.`n`n"
+            . error.Message . "`n`n"
+            . "Run EquipmentBagCaptureCalibration.ahk again.",
+            APP_NAME
+        )
+        return false
+    }
+
+    if (
+        A_ScreenWidth != CALIBRATED_SCREEN_WIDTH
+        || A_ScreenHeight != CALIBRATED_SCREEN_HEIGHT
+    )
+    {
+        answer := MsgBox(
+            "The current screen size differs from the calibration.`n`n"
+            . "Calibrated: "
+            . CALIBRATED_SCREEN_WIDTH . " x "
+            . CALIBRATED_SCREEN_HEIGHT . "`n"
+            . "Current: "
+            . A_ScreenWidth . " x "
+            . A_ScreenHeight . "`n`n"
+            . "Continuing may click the wrong locations.`n`n"
+            . "Continue anyway?",
+            APP_NAME,
+            "YesNo Icon!"
+        )
+
+        if answer != "Yes"
+            return false
+    }
+
+    if !ProcessExist("ShareX.exe")
+    {
+        MsgBox("ShareX is not running.", APP_NAME)
+        return false
+    }
+
+    MapleHwnd := WinExist(MAPLE_TITLE)
+
+    if !MapleHwnd
+    {
+        MsgBox(
+            "The MapleStory: Idle RPG PC client could not be found.",
+            APP_NAME
+        )
+        return false
+    }
+
+    return true
 }
 
 LoadConfiguration()
@@ -353,6 +602,7 @@ CaptureItems(itemsToCapture, startGridRow := 1)
     global POPUP_CLOSE_Y
     global CompletedScreenshots
     global StopRequested
+    global StopPopupOpen
 
     Loop itemsToCapture
     {
@@ -379,10 +629,13 @@ CaptureItems(itemsToCapture, startGridRow := 1)
 
         TriggerShareX()
         CompletedScreenshots += 1
-        UpdateProgress()
+        UpdateProgress("NEW CAPTURE")
 
         if StopRequested
+        {
+            StopPopupOpen := true
             return true
+        }
     }
 
     if !ActivateMaple()
@@ -396,6 +649,67 @@ CaptureItems(itemsToCapture, startGridRow := 1)
 
     LowLevelClick(POPUP_CLOSE_X, POPUP_CLOSE_Y)
     Sleep 350
+    StopPopupOpen := false
+    return true
+}
+
+CaptureResumeRange(startPosition, itemsToCapture, startGridRow)
+{
+    global APP_NAME
+    global GRID_X
+    global GRID_Y
+    global POPUP_CLOSE_X
+    global POPUP_CLOSE_Y
+    global CompletedScreenshots
+    global StopRequested
+    global StopPopupOpen
+
+    Loop itemsToCapture
+    {
+        position := startPosition + A_Index - 1
+        row := startGridRow + Floor((position - 1) / 3)
+        column := Mod(position - 1, 3) + 1
+
+        if !ActivateMaple()
+        {
+            MsgBox(
+                "Maple could not be activated before item "
+                . (CompletedScreenshots + 1) . ".",
+                APP_NAME
+            )
+            return false
+        }
+
+        ReliableItemClick(GRID_X[column], GRID_Y[row])
+
+        if A_Index = 1
+            Sleep 750
+        else
+            Sleep 600
+
+        TriggerShareX()
+        CompletedScreenshots += 1
+        UpdateProgress("RESUME")
+
+        if StopRequested
+        {
+            StopPopupOpen := true
+            return true
+        }
+    }
+
+    if !ActivateMaple()
+    {
+        MsgBox(
+            "Maple could not be activated to close the equipment popup.",
+            APP_NAME
+        )
+        return false
+    }
+
+    LowLevelClick(POPUP_CLOSE_X, POPUP_CLOSE_Y)
+    Sleep 350
+    StopPopupOpen := false
     return true
 }
 
@@ -426,6 +740,8 @@ MoveOnce()
         return false
     }
 
+    ; DO NOT CHANGE:
+    ; movement 1 = 576, movement 2 = 577, then alternate.
     movementNumber := CompletedMovements + 1
     movementDistance := Mod(movementNumber, 2) = 1
         ? DRAG_SHORT_DISTANCE
@@ -433,7 +749,7 @@ MoveOnce()
 
     PerformDrag(movementDistance)
     CompletedMovements += 1
-    UpdateProgress()
+    UpdateProgress("CAPTURE")
     Sleep 800
     return true
 }
@@ -469,7 +785,7 @@ PerformDrag(movementDistance)
     Sleep 300
 }
 
-UpdateProgress()
+UpdateProgress(mode := "CAPTURE")
 {
     global RequestedItems
     global ExpectedMovements
@@ -478,7 +794,8 @@ UpdateProgress()
     global SHAREX_POST_CAPTURE_DELAY
 
     ToolTip(
-        "Captured: " . CompletedScreenshots . " / " . RequestedItems . "`n"
+        mode . "`n"
+        . "Captured: " . CompletedScreenshots . " / " . RequestedItems . "`n"
         . "Movements: " . CompletedMovements . " / " . ExpectedMovements . "`n"
         . "ShareX: " . SHAREX_POST_CAPTURE_DELAY . " ms",
         20,
@@ -543,7 +860,52 @@ UnlockUserMouse()
     try BlockInput "MouseMoveOff"
 }
 
-ShowStoppedReport()
+HandleSafeStop(popupOpen)
+{
+    global APP_NAME
+    global CaptureRunning
+
+    CaptureRunning := false
+    UnlockUserMouse()
+    ToolTip
+
+    SaveCheckpoint(popupOpen)
+    ShowStoppedReport(popupOpen)
+
+    ReleaseEverything()
+    ExitApp
+}
+
+SaveCheckpoint(popupOpen)
+{
+    global CHECKPOINT_FILE
+    global RequestedItems
+    global ExpectedMovements
+    global CompletedScreenshots
+    global CompletedMovements
+
+    nextItem := CompletedScreenshots + 1
+
+    if FileExist(CHECKPOINT_FILE)
+        FileDelete CHECKPOINT_FILE
+
+    IniWrite RequestedItems, CHECKPOINT_FILE, "Resume", "RequestedItems"
+    IniWrite ExpectedMovements, CHECKPOINT_FILE, "Resume", "ExpectedMovements"
+    IniWrite CompletedScreenshots, CHECKPOINT_FILE, "Resume", "CompletedScreenshots"
+    IniWrite CompletedMovements, CHECKPOINT_FILE, "Resume", "CompletedMovements"
+    IniWrite nextItem, CHECKPOINT_FILE, "Resume", "NextItem"
+    IniWrite (popupOpen ? 1 : 0), CHECKPOINT_FILE, "Resume", "PopupOpen"
+}
+
+DeleteCheckpoint()
+{
+    global CHECKPOINT_FILE
+
+    if FileExist(CHECKPOINT_FILE)
+        FileDelete CHECKPOINT_FILE
+}
+
+ShowStoppedReport(popupOpen)
 {
     global APP_NAME
     global RequestedItems
@@ -551,21 +913,23 @@ ShowStoppedReport()
     global CompletedMovements
     global ExpectedMovements
     global SHAREX_POST_CAPTURE_DELAY
+    global CHECKPOINT_FILE
 
-    ToolTip
-
-    nextItem := Min(RequestedItems, CompletedScreenshots + 1)
+    nextItem := CompletedScreenshots + 1
 
     report := (
         "CAPTURE STOPPED SAFELY.`n`n"
         . "Requested equipment items: " . RequestedItems . "`n"
         . "Screenshot commands completed: " . CompletedScreenshots . "`n"
-        . "Next item number would be: " . nextItem . "`n`n"
+        . "Next item number: " . nextItem . "`n`n"
         . "Expected movements: " . ExpectedMovements . "`n"
         . "Movements completed: " . CompletedMovements . "`n`n"
         . "ShareX post-capture wait: " . SHAREX_POST_CAPTURE_DELAY . " ms`n`n"
-        . "Automatic resume is not implemented.`n"
-        . "Treat the next-item number as a checkpoint."
+        . "Resume checkpoint SAVED.`n"
+        . "Popup open at checkpoint: " . (popupOpen ? "Yes" : "No") . "`n`n"
+        . "DO NOT move or scroll the Maple equipment bag.`n"
+        . "Restart this same script and press F9 to resume.`n`n"
+        . "Checkpoint file:`n" . CHECKPOINT_FILE
     )
 
     A_Clipboard := report
@@ -576,12 +940,9 @@ ShowStoppedReport()
         . "`n`nPress OK to close the script.",
         APP_NAME
     )
-
-    ReleaseEverything()
-    ExitApp
 }
 
-ShowCompletionReport()
+ShowCompletionReport(wasResumed := false)
 {
     global APP_NAME
     global RequestedItems
@@ -590,22 +951,22 @@ ShowCompletionReport()
     global ExpectedMovements
     global SHAREX_POST_CAPTURE_DELAY
 
-    ToolTip
-
     report := (
-        "Finished.`n`n"
+        (wasResumed ? "RESUMED CAPTURE FINISHED." : "Finished.") . "`n`n"
         . "Requested equipment items: " . RequestedItems . "`n"
         . "Screenshot commands sent: " . CompletedScreenshots . "`n`n"
         . "Expected movements: " . ExpectedMovements . "`n"
         . "Movements performed: " . CompletedMovements . "`n`n"
-        . "ShareX post-capture wait: " . SHAREX_POST_CAPTURE_DELAY . " ms"
+        . "ShareX post-capture wait: " . SHAREX_POST_CAPTURE_DELAY . " ms`n"
+        . "Resume checkpoint cleared: Yes"
     )
 
     A_Clipboard := report
+
     MsgBox(
         report
         . "`n`nThe result has been copied to the clipboard."
-        . "`n`nFor an important run, also verify the actual screenshot file count and check for duplicates.",
+        . "`n`nFor an important run, verify the screenshot file count and CRCs.",
         APP_NAME
     )
 }

@@ -117,6 +117,12 @@ StartCalibration()
 
     WinGetPos &windowLeft, &windowTop, &windowWidth, &windowHeight,
         "ahk_id " . mapleHwnd
+
+    ; AutoHotkey v2 creates a missing INI as UTF-16 with a BOM. Recreate the
+    ; calibration file here so an older ANSI copy is normalized automatically.
+    if FileExist(CONFIG_FILE)
+        FileDelete(CONFIG_FILE)
+
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
     IniWrite(A_ScreenHeight, CONFIG_FILE, "General", "ScreenHeight")

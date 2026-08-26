@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableExtensions
 
 echo.
@@ -61,19 +61,16 @@ $ErrorActionPreference = 'Stop'
 function Get-Crc32 {
     param([Parameter(Mandatory=$true)][string]$Path)
 
-    [uint64]$poly = 3988292384
-    [uint64]$mask = 4294967295
-    [uint64]$crc  = $mask
-
-    $table = New-Object 'System.UInt64[]' 256
+    [uint32]$crc = 0xFFFFFFFF
+    $table = New-Object 'System.UInt32[]' 256
 
     for ($i = 0; $i -lt 256; $i++) {
-        [uint64]$c = $i
+        [uint32]$c = $i
         for ($j = 0; $j -lt 8; $j++) {
             if (($c -band 1) -ne 0) {
-                $c = ($poly -bxor ($c -shr 1)) -band $mask
+                $c = [uint32](0xEDB88320 -bxor ($c -shr 1))
             } else {
-                $c = ($c -shr 1) -band $mask
+                $c = [uint32]($c -shr 1)
             }
         }
         $table[$i] = $c
@@ -84,8 +81,8 @@ function Get-Crc32 {
         $buffer = New-Object byte[] 65536
         while (($read = $stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
             for ($k = 0; $k -lt $read; $k++) {
-                $idx = [int](($crc -bxor [uint64]$buffer[$k]) -band 255)
-                $crc = (($crc -shr 8) -bxor $table[$idx]) -band $mask
+                $idx = (($crc -bxor $buffer[$k]) -band 0xFF)
+                $crc = [uint32](($crc -shr 8) -bxor $table[$idx])
             }
         }
     }
@@ -93,8 +90,8 @@ function Get-Crc32 {
         $stream.Dispose()
     }
 
-    $crc = ($crc -bxor $mask) -band $mask
-    return ('{0:X8}' -f $crc)
+    $crc = [uint32]($crc -bxor 0xFFFFFFFF)
+    '{0:X8}' -f $crc
 }
 
 $Folder = (Resolve-Path -LiteralPath $Folder).Path
@@ -147,6 +144,7 @@ $lines.Add('')
 if ($imageFiles.Count -gt 0) {
     $oldest = $imageFiles | Sort-Object LastWriteTime | Select-Object -First 1
     $newest = $imageFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
     $lines.Add('OLDEST IMAGE')
     $lines.Add('------------')
     $lines.Add("$($oldest.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))  $($oldest.Name)")
@@ -163,7 +161,13 @@ $lines.Add('Date/Time             Bytes       CRC32      Filename')
 $lines.Add('-------------------  ----------  --------  ----------------------------------------')
 
 foreach ($row in $rows) {
-    $lines.Add(('{0}  {1,10}  {2}  {3}' -f $row.Time.ToString('yyyy-MM-dd HH:mm:ss'), $row.Bytes, $row.CRC32, $row.Name))
+    $lines.Add(
+        ('{0}  {1,10}  {2}  {3}' -f
+            $row.Time.ToString('yyyy-MM-dd HH:mm:ss'),
+            $row.Bytes,
+            $row.CRC32,
+            $row.Name)
+    )
 }
 
 $lines.Add('')
@@ -176,6 +180,7 @@ if ($duplicateGroups.Count -eq 0) {
     $lines.Add('WARNING: Files below have identical CRC32 values.')
     $lines.Add('Identical CRC32 normally means the files are byte-for-byte identical.')
     $lines.Add('')
+
     foreach ($group in $duplicateGroups) {
         $lines.Add("CRC32: $($group.Name)  Count: $($group.Count)")
         foreach ($item in $group.Group) {

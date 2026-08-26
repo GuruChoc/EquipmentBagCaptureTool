@@ -1,4 +1,4 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 SetTitleMatchMode 2
@@ -30,6 +30,12 @@ global HOLD_DELAY := 700
 global CALIBRATED_SCREEN_WIDTH := 0
 global CALIBRATED_SCREEN_HEIGHT := 0
 
+; Phase 12: Maple window geometry recorded by calibration.
+global CALIBRATED_WINDOW_LEFT := ""
+global CALIBRATED_WINDOW_TOP := ""
+global CALIBRATED_WINDOW_WIDTH := ""
+global CALIBRATED_WINDOW_HEIGHT := ""
+
 global RequestedItems := 0
 global ExpectedMovements := 0
 global CompletedScreenshots := 0
@@ -37,6 +43,8 @@ global CompletedMovements := 0
 global CaptureRunning := false
 global StopRequested := false
 global StopPopupOpen := false
+global PostMovementFirstItemPending := false
+global RUN_LOG := A_ScriptDir . "\\EquipmentBagCapture_Run.log"
 
 global SHAREX_POST_CAPTURE_DELAY := 850
 
@@ -129,6 +137,7 @@ StartEquipmentCapture()
     global CaptureRunning
     global StopRequested
     global StopPopupOpen
+    global PostMovementFirstItemPending
     global CALIBRATED_SCREEN_WIDTH
     global CALIBRATED_SCREEN_HEIGHT
     global SHAREX_POST_CAPTURE_DELAY
@@ -214,6 +223,8 @@ StartEquipmentCapture()
     CompletedMovements := 0
     StopRequested := false
     StopPopupOpen := false
+    PostMovementFirstItemPending := false
+    InitRunLog("NEW", 1)
     CaptureRunning := true
 
     LockUserMouse()
@@ -301,6 +312,7 @@ ResumeSavedCapture()
     global CaptureRunning
     global StopRequested
     global StopPopupOpen
+    global PostMovementFirstItemPending
     global POPUP_CLOSE_X
     global POPUP_CLOSE_Y
 
@@ -388,6 +400,16 @@ ResumeSavedCapture()
 
     StopRequested := false
     StopPopupOpen := false
+
+    ; If the checkpoint was taken after a completed movement but before the
+    ; first item on the new screen was captured, re-arm the post-move fix.
+    PostMovementFirstItemPending := (
+        CompletedMovements > 0
+        && CompletedScreenshots = (CompletedMovements * 12)
+        && CompletedScreenshots < RequestedItems
+    )
+
+    InitRunLog("RESUME", CompletedScreenshots + 1, true)
     CaptureRunning := true
     LockUserMouse()
     UpdateProgress("RESUME")
@@ -401,6 +423,8 @@ ResumeSavedCapture()
         return
     }
 
+    ; If Esc stopped immediately after a captured item, that item's popup
+    ; is deliberately left open. Close it before resuming.
     if popupOpen
     {
         LowLevelClick(POPUP_CLOSE_X, POPUP_CLOSE_Y)
@@ -410,11 +434,17 @@ ResumeSavedCapture()
     while CompletedScreenshots < RequestedItems
     {
         nextItem := CompletedScreenshots + 1
+
+        ; The number of completed movements tells us which 12-item batch
+        ; is currently visible. This keeps the original scroll path intact.
         batchStart := (CompletedMovements * 12) + 1
         batchRemaining := RequestedItems - batchStart + 1
         batchItems := Min(12, batchRemaining)
         batchEnd := batchStart + batchItems - 1
 
+        ; Example: stopped after item 12 before the movement happened.
+        ; The next item is beyond the current batch, so perform the same
+        ; proven movement that the normal path would have performed.
         if nextItem > batchEnd
         {
             StopPopupOpen := false
@@ -438,6 +468,7 @@ ResumeSavedCapture()
 
         startGridRow := 1
 
+        ; Preserve the normal final-screen bottom-clamp handling.
         if CompletedMovements > 0 && batchItems < 12
         {
             rowsNeeded := Ceil(batchItems / 3)
@@ -543,7 +574,152 @@ PrepareEnvironment()
         return false
     }
 
+    ; Phase 12 safety gate: absolute click calibration is only safe when
+    ; Maple is at the same position and size used during calibration.
+    if !ValidateMapleWindowPosition()
+        return false
+
     return true
+}
+
+ValidateMapleWindowPosition()
+{
+    global APP_NAME
+    global MapleHwnd
+    global CONFIG_FILE
+    global CALIBRATED_WINDOW_LEFT
+    global CALIBRATED_WINDOW_TOP
+    global CALIBRATED_WINDOW_WIDTH
+    global CALIBRATED_WINDOW_HEIGHT
+
+    if (
+        CALIBRATED_WINDOW_LEFT = ""
+        || CALIBRATED_WINDOW_TOP = ""
+        || CALIBRATED_WINDOW_WIDTH = ""
+        || CALIBRATED_WINDOW_HEIGHT = ""
+    )
+    {
+        MsgBox(
+            "CAPTURE BLOCKED - NO SAVED MAPLE WINDOW POSITION.`n`n"
+            . "This calibration predates the Phase 12 position-safety check.`n`n"
+            . "Run EquipmentBagCaptureCalibration.ahk once to record "
+            . "the Maple window position and size used for calibration.`n`n"
+            . "Capture will not continue with unknown window geometry.",
+            APP_NAME,
+            "Iconx"
+        )
+        return false
+    }
+
+    WinGetPos &currentLeft, &currentTop, &currentWidth, &currentHeight,
+        "ahk_id " . MapleHwnd
+
+    savedLeft := CALIBRATED_WINDOW_LEFT + 0
+    savedTop := CALIBRATED_WINDOW_TOP + 0
+    savedWidth := CALIBRATED_WINDOW_WIDTH + 0
+    savedHeight := CALIBRATED_WINDOW_HEIGHT + 0
+
+    if (
+        currentLeft = savedLeft
+        && currentTop = savedTop
+        && currentWidth = savedWidth
+        && currentHeight = savedHeight
+    )
+        return true
+
+    answer := MsgBox(
+        "MAPLE HAS MOVED SINCE CALIBRATION.`n`n"
+        . "Saved capture position:`n"
+        . "  Left=" . savedLeft . ", Top=" . savedTop . "`n"
+        . "  Width=" . savedWidth . ", Height=" . savedHeight . "`n`n"
+        . "Current Maple position:`n"
+        . "  Left=" . currentLeft . ", Top=" . currentTop . "`n"
+        . "  Width=" . currentWidth . ", Height=" . currentHeight . "`n`n"
+        . "The capture uses absolute screen coordinates, so continuing "
+        . "from this position is unsafe.`n`n"
+        . "YES = reposition Maple to the calibrated position and re-check.`n"
+        . "NO = cancel capture.",
+        APP_NAME,
+        "YesNo Icon!"
+    )
+
+    if answer != "Yes"
+        return false
+
+    if !RepositionMapleToCalibration()
+    {
+        MsgBox(
+            "CAPTURE BLOCKED.`n`n"
+            . "Maple could not be restored to the calibrated position.",
+            APP_NAME,
+            "Iconx"
+        )
+        return false
+    }
+
+    WinGetPos &currentLeft, &currentTop, &currentWidth, &currentHeight,
+        "ahk_id " . MapleHwnd
+
+    if (
+        currentLeft != savedLeft
+        || currentTop != savedTop
+        || currentWidth != savedWidth
+        || currentHeight != savedHeight
+    )
+    {
+        MsgBox(
+            "CAPTURE BLOCKED.`n`n"
+            . "The reposition command ran, but Maple still does not exactly "
+            . "match the saved calibration geometry.",
+            APP_NAME,
+            "Iconx"
+        )
+        return false
+    }
+
+    MsgBox(
+        "Maple has been restored to the calibrated capture position.`n`n"
+        . "Position safety check: PASS.",
+        APP_NAME,
+        "Iconi"
+    )
+
+    return true
+}
+
+RepositionMapleToCalibration()
+{
+    global MapleHwnd
+    global CALIBRATED_WINDOW_LEFT
+    global CALIBRATED_WINDOW_TOP
+    global CALIBRATED_WINDOW_WIDTH
+    global CALIBRATED_WINDOW_HEIGHT
+
+    left := CALIBRATED_WINDOW_LEFT + 0
+    top := CALIBRATED_WINDOW_TOP + 0
+    width := CALIBRATED_WINDOW_WIDTH + 0
+    height := CALIBRATED_WINDOW_HEIGHT + 0
+
+    ; Restore first in case Maple is minimized/maximized.
+    try DllCall("user32\ShowWindow", "Ptr", MapleHwnd, "Int", 9)
+
+    ; Same Win32 method that successfully repositioned Maple in our manual test.
+    flags := 0x0004 | 0x0010 | 0x0040  ; NOZORDER | NOACTIVATE | SHOWWINDOW
+
+    result := DllCall(
+        "user32\SetWindowPos",
+        "Ptr", MapleHwnd,
+        "Ptr", 0,
+        "Int", left,
+        "Int", top,
+        "Int", width,
+        "Int", height,
+        "UInt", flags,
+        "Int"
+    )
+
+    Sleep 500
+    return result != 0
 }
 
 LoadConfiguration()
@@ -563,10 +739,21 @@ LoadConfiguration()
     global HOLD_DELAY
     global CALIBRATED_SCREEN_WIDTH
     global CALIBRATED_SCREEN_HEIGHT
+    global CALIBRATED_WINDOW_LEFT
+    global CALIBRATED_WINDOW_TOP
+    global CALIBRATED_WINDOW_WIDTH
+    global CALIBRATED_WINDOW_HEIGHT
 
     MAPLE_TITLE := IniRead(CONFIG_FILE, "General", "WindowTitle")
     CALIBRATED_SCREEN_WIDTH := IniRead(CONFIG_FILE, "General", "ScreenWidth") + 0
     CALIBRATED_SCREEN_HEIGHT := IniRead(CONFIG_FILE, "General", "ScreenHeight") + 0
+
+    ; Older calibration files do not contain window geometry. Treat them as
+    ; unsafe until the Phase 12 calibration wrapper has recorded it.
+    CALIBRATED_WINDOW_LEFT := IniRead(CONFIG_FILE, "General", "WindowLeft", "")
+    CALIBRATED_WINDOW_TOP := IniRead(CONFIG_FILE, "General", "WindowTop", "")
+    CALIBRATED_WINDOW_WIDTH := IniRead(CONFIG_FILE, "General", "WindowWidth", "")
+    CALIBRATED_WINDOW_HEIGHT := IniRead(CONFIG_FILE, "General", "WindowHeight", "")
 
     GRID_X := [
         IniRead(CONFIG_FILE, "Grid", "X1") + 0,
@@ -620,7 +807,7 @@ CaptureItems(itemsToCapture, startGridRow := 1)
             return false
         }
 
-        ReliableItemClick(GRID_X[column], GRID_Y[row])
+        ClickItemForCapture(GRID_X[column], GRID_Y[row], CompletedScreenshots + 1)
 
         if itemOnScreen = 1
             Sleep 750
@@ -680,7 +867,7 @@ CaptureResumeRange(startPosition, itemsToCapture, startGridRow)
             return false
         }
 
-        ReliableItemClick(GRID_X[column], GRID_Y[row])
+        ClickItemForCapture(GRID_X[column], GRID_Y[row], CompletedScreenshots + 1)
 
         if A_Index = 1
             Sleep 750
@@ -720,11 +907,48 @@ ReliableItemClick(clickX, clickY)
     LowLevelClick(clickX, clickY)
 }
 
+ClickItemForCapture(clickX, clickY, itemNumber)
+{
+    global PostMovementFirstItemPending
+
+    if !PostMovementFirstItemPending
+    {
+        ReliableItemClick(clickX, clickY)
+        return
+    }
+
+    ; POST-MOVEMENT FIX:
+    ; The long-run CRC test showed one identical transition/non-equipment
+    ; screenshot per movement. Do not alter the proven 576/577 drag or the
+    ; normal 850 ms ShareX delay. Instead, give Maple a short extra settle,
+    ; perform the normal reliable two-click selection, then confirm the same
+    ; item once more before the normal pre-capture wait.
+    LogRun(
+        "POST-MOVE FIRST ITEM | item=" . itemNumber
+        . " | extra settle/reclick starting"
+    )
+
+    Sleep 350
+    ReliableItemClick(clickX, clickY)
+    Sleep 450
+    LowLevelClick(clickX, clickY)
+    Sleep 300
+
+    PostMovementFirstItemPending := false
+
+    LogRun(
+        "POST-MOVE FIRST ITEM | item=" . itemNumber
+        . " | extra settle/reclick complete"
+    )
+}
+
 MoveOnce()
 {
     global APP_NAME
+    global CompletedScreenshots
     global CompletedMovements
     global StopRequested
+    global PostMovementFirstItemPending
     global DRAG_SHORT_DISTANCE
     global DRAG_LONG_DISTANCE
 
@@ -747,9 +971,31 @@ MoveOnce()
         ? DRAG_SHORT_DISTANCE
         : DRAG_LONG_DISTANCE
 
+    nextItem := CompletedScreenshots + 1
+
+    LogRun(
+        "BEFORE MOVEMENT | movement=" . movementNumber
+        . " | next item=" . nextItem
+        . " | screenshots=" . CompletedScreenshots
+        . " | distance=" . movementDistance
+    )
+
     PerformDrag(movementDistance)
     CompletedMovements += 1
+
+    ; Arm a one-shot recovery sequence for the first item after this movement.
+    PostMovementFirstItemPending := true
+
+    LogRun(
+        "AFTER MOVEMENT | movement=" . CompletedMovements
+        . " | next item=" . nextItem
+        . " | screenshots=" . CompletedScreenshots
+        . " | post-move first-item fix=ARMED"
+    )
+
     UpdateProgress("CAPTURE")
+
+    ; Keep the proven movement settle unchanged.
     Sleep 800
     return true
 }
@@ -783,6 +1029,37 @@ PerformDrag(movementDistance)
     Sleep HOLD_DELAY
     Click "Up"
     Sleep 300
+}
+
+InitRunLog(mode, nextItem, append := false)
+{
+    global RUN_LOG
+    global RequestedItems
+    global CompletedScreenshots
+    global CompletedMovements
+    global SHAREX_POST_CAPTURE_DELAY
+
+    if !append
+    {
+        try FileDelete(RUN_LOG)
+    }
+
+    LogRun(
+        "RUN START | mode=" . mode
+        . " | requested=" . RequestedItems
+        . " | completed screenshots=" . CompletedScreenshots
+        . " | completed movements=" . CompletedMovements
+        . " | next item=" . nextItem
+        . " | ShareX wait=" . SHAREX_POST_CAPTURE_DELAY . " ms"
+    )
+}
+
+LogRun(message)
+{
+    global RUN_LOG
+
+    timestamp := FormatTime(, "yyyy-MM-dd HH:mm:ss")
+    try FileAppend(timestamp . " | " . message . "`n", RUN_LOG, "UTF-8")
 }
 
 UpdateProgress(mode := "CAPTURE")
@@ -958,7 +1235,8 @@ ShowCompletionReport(wasResumed := false)
         . "Expected movements: " . ExpectedMovements . "`n"
         . "Movements performed: " . CompletedMovements . "`n`n"
         . "ShareX post-capture wait: " . SHAREX_POST_CAPTURE_DELAY . " ms`n"
-        . "Resume checkpoint cleared: Yes"
+        . "Resume checkpoint cleared: Yes`n`n"
+        . "Run log: " . RUN_LOG
     )
 
     A_Clipboard := report

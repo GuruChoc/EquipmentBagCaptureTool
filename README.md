@@ -1,4 +1,7 @@
-# Equipment Bag Capture Tool
+﻿# Equipment Bag Capture Tool
+
+**Test version:** 1.0.3-diagnostic-test
+
 
 Equipment Bag Capture Tool automates screenshot capture of equipment detail popups in the MapleStory: Idle RPG PC client using AutoHotkey v2 and ShareX.
 
@@ -31,13 +34,11 @@ winget install --id ShareX.ShareX --exact
 
 ## Files
 
-- `EquipmentBagCaptureTool.ahk` — main capture script
-- `EquipmentBagCaptureCalibration.ahk` — coordinate calibration wizard
-- `Check_Screenshot_Folder_CRC.bat` — optional post-run screenshot count and CRC32 duplicate checker
-- `EquipmentBagCapture.ini` — generated local calibration file
-- `EquipmentBagCaptureCheckpoint.ini` — generated local safe-stop/resume checkpoint
+- `EquipmentBagCaptureTool.ahk` â€” main capture script
+- `EquipmentBagCaptureCalibration.ahk` â€” coordinate calibration wizard
+- `EquipmentBagCapture.ini` â€” generated local calibration file
 
-Both INI files are deliberately excluded from the repository because they contain local runtime state specific to one PC/run.
+`EquipmentBagCapture.ini` is deliberately excluded from this repository because its coordinates are specific to one PC/setup.
 
 ## 1. Prepare ShareX
 
@@ -56,10 +57,10 @@ Before a real run, empty or change the destination folder so old screenshots can
 1. Open MapleStory: Idle RPG.
 2. Open the **hamburger menu**.
 3. Select **Preset**.
-4. Go to **Chapter → Chapter Hunt**.
+4. Go to **Chapter â†’ Chapter Hunt**.
 5. Click **Edit Preset**.
 6. In the **Manage Equipment** box, click the symbol in the **bottom-right corner**.
-7. Confirm that the equipment bag is displayed as a **3-column grid**.
+7. Confirm the equipment bag is displayed as a **3-column grid**.
 8. Select the equipment category you want to capture.
 9. Put the equipment list at the absolute top.
 
@@ -89,7 +90,14 @@ The validated layout uses approximately:
 - horizontal pitch: **131 px**
 - vertical pitch: **140 px**
 
-Small hand-placement differences are automatically normalized. Measurements around the validated layout are treated as the known-good geometry so tiny human placement variation does not change the scrolling maths.
+Small hand-placement differences are automatically normalized:
+
+- measured horizontal pitch from **129 to 133 px** is treated as **131 px**
+- measured vertical pitch from **138 to 142 px** is treated as **140 px**
+
+So a user measuring 139 px on one calibration and 140 px on the next does not suddenly get different scrolling behaviour. The raw measurement and the effective normalized measurement are both stored in the local INI for troubleshooting.
+
+If the measured pitch is clearly outside those tolerance ranges, the tool assumes the layout, resolution or scaling is genuinely different and uses/scales from the actual measured pitch instead.
 
 The popup-close position is calculated from the popup `Lv.` landmark, so the user no longer has to manually target the popup X during calibration.
 
@@ -99,13 +107,15 @@ Recalibrate whenever resolution, Windows display scaling, Maple window size, Map
 
 The mouse-down point is the calculated **row 5 / column 3 `Lv.` position**: one effective row pitch below the fourth visible row.
 
-On the validated 140 px layout, repeated tests found the stable scrolling sweet spot at **576 and 577 px**, alternating on successive movements:
+Testing showed that a geometric four-row drag was slightly short because Maple does not translate mouse travel into list movement perfectly one-for-one. On the validated 140 px layout, repeated tests found the stable sweet spot at **576 and 577 px**, alternating on successive movements:
 
 `576, 577, 576, 577, ...`
 
 This averages **576.5 px** over an even number of movements and reduces cumulative drift across long equipment bags.
 
-The movement routine remains the proven single held drag:
+Because the calibration now normalizes small 1-2 pixel human variation around the validated 140 px row pitch, measurements such as 138, 139, 140, 141 or 142 px all retain the proven literal **576 / 577 px** movement pattern. The distances are scaled only when the measured layout is clearly different from the validated geometry.
+
+The movement routine itself remains the proven single held drag:
 
 - move to the row-5 grab point
 - mouse button down
@@ -115,69 +125,20 @@ The movement routine remains the proven single held drag:
 
 At the bottom of a list Maple may elastically bounce back slightly when there is no more content to scroll. The capture tool never performs an unnecessary movement after the final batch. On an incomplete final screen it captures the new items from the bottom rows after Maple settles.
 
-## 5. Faster capture in v1.0.2
-
-The ShareX post-capture wait has been reduced from **1400 ms to 850 ms**. The two-click item selection, popup handling, calibration and equipment-list scrolling remain unchanged.
-
-The 850 ms timing was validated with:
-
-- **242 requested items** → 242 screenshot commands and 20 movements completed
-- **201 requested items** → 201 screenshot commands and 16 movements completed with mouse-movement lock enabled
-- file-level verification of that 201-item run → **201 PNG files and 0 duplicate CRC32 groups**
-
-The shorter delay saves significant time on large bags without changing the proven click/scroll mechanics.
-
-## 6. Mouse-movement lock, safe Esc stop and F9 resume
-
-During capture, physical mouse movement is locked so an accidental mouse movement cannot pull the pointer away from the scripted coordinates. The script's own mouse movement and clicks continue normally.
-
-Do not deliberately click the mouse or use other keyboard keys while a capture is running.
-
-### Safe stop
-
-Press **Esc** if you need to stop. The tool:
-
-- safely stops at the current checkpoint
-- unlocks physical mouse movement
-- reports screenshot commands completed
-- reports movements completed
-- reports the next item number
-- records whether the last equipment popup is still open
-- saves the checkpoint to `EquipmentBagCaptureCheckpoint.ini`
-- closes the script after you dismiss the report
-
-### Resume
-
-After pressing Esc:
-
-1. **Do not move or scroll the Maple equipment bag.**
-2. Do not manually close the equipment popup left by the safe stop.
-3. Leave the same equipment category selected.
-4. Restart `EquipmentBagCaptureTool.ahk`.
-5. The startup message will show the saved checkpoint.
-6. Press **F9**.
-7. Confirm the resume details.
-8. Leave the mouse and keyboard alone while the capture continues.
-
-The tool resumes from the saved next item, continues the existing movement sequence and clears `EquipmentBagCaptureCheckpoint.ini` after a successful completion.
-
-If you press **F8** while a checkpoint exists, the tool warns that starting a new capture will delete the saved checkpoint and asks for confirmation first.
-
-Resume depends on Maple still being at the same equipment category and scroll position left by the safe stop. If that state has changed, do not resume; start a clean capture from the absolute top instead.
-
-## 7. Test before a full run
+## 5. Test before a full run
 
 After calibrating, use a small category first.
 
 1. Start ShareX.
 2. Start `EquipmentBagCaptureTool.ahk`.
 3. Put the equipment list at the absolute top.
-4. Press `F8` and enter `12` to confirm item clicking and ShareX capture.
+4. Press `F8` and enter `12` to confirm item clicking and ShareX capture still work.
 5. Reset the list to the absolute top.
 6. Run a multi-screen test such as `36` items and check for duplicates or skipped items.
-7. For a resume test, press `Esc` partway through a multi-screen run, leave Maple untouched, restart the script and press `F9`.
 
-## 8. Capture a full equipment bag
+The screenshot side uses the previously proven two-click selection and ShareX behaviour; movement uses the verified row-5 grab point and alternating short/long drag distances.
+
+## 6. Capture a full equipment bag
 
 1. Start ShareX and confirm its save folder.
 2. Start `EquipmentBagCaptureTool.ahk`.
@@ -188,43 +149,26 @@ After calibrating, use a small category first.
 7. Press `F8`.
 8. Enter the exact item count.
 9. Read the summary and press **OK**.
-10. Leave the mouse and keyboard alone until the completion message appears, unless you need to press **Esc** to stop safely.
+10. Do not touch the mouse or keyboard until the completion message appears.
 
-A live counter in the top-left corner shows captured items and movement progress.
+Press `Esc` to stop immediately. **Esc closes the AutoHotkey script completely**, so restart `EquipmentBagCaptureTool.ahk` before another run.
 
 ## Proven capture behaviour
 
-The capture side retains the behaviour from the successful `MapleRingTest.ahk` testing:
+The capture side retains the behaviour from the final successful `MapleRingTest.ahk` test:
 
 - each equipment item is clicked **twice**, with a pause between clicks
 - ShareX is triggered with `SendEvent "^+z"`
 - list movement uses a **single held drag**
 - the script waits **800 ms after each movement** before continuing
 
-Validation history includes:
+The historical successful full-bag test reported:
 
-- **36-item** multi-screen test
-- **134-item** full capture requiring **11 movements**
-- **300+ item** full-bag stress test for long-run scrolling and cumulative drift
-- earlier successful **249-item** capture with **20 movements**
-- v1.0.2 faster-timing **242-item** test with **20 movements**
-- v1.0.2 input-lock **201-item** test with **16 movements** and **0 duplicate CRC32 groups**
-- v1.0.2 persistent resume test: stopped after item **19**, saved item **20** as the next checkpoint, closed/reopened the script, resumed with `F9`, and finished **36/36 screenshots with 2/2 movements**
-- combined stop/resume output verification: **36 PNG files and 0 duplicate CRC32 groups**
-
-## Verify a completed screenshot folder
-
-For an important capture, run `Check_Screenshot_Folder_CRC.bat` and enter the screenshot folder path.
-
-It creates `Screenshot_Check_Report_CRC.txt` containing:
-
-- PNG/JPG/JPEG counts
-- chronological image list
-- file sizes
-- CRC32 for every image
-- groups of exact duplicate CRC32 values, if any
-
-CRC32 is useful for identifying byte-for-byte duplicate screenshots. Different CRC32 values do not prove the screenshots show different equipment, so visual/OCR validation may still be useful for critical runs.
+- Requested equipment items: **249**
+- Screenshot commands sent: **249**
+- Expected movements: **20**
+- Movements performed: **20**
+- The run reached the bottom of the bag correctly
 
 ## What the completion report proves
 
@@ -233,7 +177,7 @@ The completion report confirms only:
 - number of screenshot hotkey commands sent
 - number of movement commands performed
 
-It cannot prove that ShareX saved every image or that every in-game click was accepted. After an important capture, check the output file count and optionally run the CRC checker.
+It cannot prove that ShareX saved every image or that every in-game click was accepted. After an important capture, check the output file count and verify the batch for duplicates.
 
 ## Troubleshooting
 
@@ -243,7 +187,7 @@ Install AutoHotkey v2. The scripts are not compatible with AutoHotkey v1.
 
 ### ShareX is not running
 
-Start ShareX before pressing `F8` or `F9`.
+Start ShareX before pressing `F8`.
 
 ### No screenshots are saved
 
@@ -257,39 +201,30 @@ Start ShareX before pressing `F8` or `F9`.
 - restore Maple to the calibrated position and size
 - restore the calibrated resolution/display scaling
 - rerun calibration
-- aim carefully at the requested `Lv.` dots; small human placement variation is normalized automatically
+- aim carefully at the requested `Lv.` dots; tiny 1-2 px pitch variation is normalized automatically
 
 ### Movement is wrong
 
-- make sure the list was at the absolute top during calibration and at the start of a new run
+- make sure the list was at the absolute top during calibration and at the start of the run
 - recalibrate after any resolution, scaling, Maple window size or position change
-- on the validated layout, movement should remain **576 / 577 px**
+- check the calibration summary: on the validated layout, small pitch variation should normalize to **131 x 140 px** and movement should remain **576 / 577 px**
 - test a small multi-screen category before a full bag
 
-### I pressed Esc
+### I pressed Esc and F8 no longer works
 
-Esc safely stops the run, unlocks mouse movement, saves the resume checkpoint and displays the next item number. Leave Maple untouched, restart the same AHK and press **F9** to resume.
-
-### F9 says there is no checkpoint
-
-A successful completion clears the checkpoint automatically. A new F8 capture also deletes an old checkpoint after confirmation. If the checkpoint is gone, reset the bag to the absolute top and start a new capture.
-
-### I moved or scrolled Maple after pressing Esc
-
-Do not use F9 resume from a changed game state. Reset the bag to the absolute top and start a new F8 capture instead.
+`Esc` exits `EquipmentBagCaptureTool.ahk` completely. Double-click `EquipmentBagCaptureTool.ahk` again, dismiss the startup message, then press `F8` when ready.
 
 ### A screenshot is duplicated
 
-The game may not have accepted an equipment selection before ShareX captured the popup. Treat the batch as incomplete and rerun it. `Check_Screenshot_Folder_CRC.bat` can identify exact duplicate image files.
+The game did not accept the equipment selection before ShareX captured the popup. Treat the batch as incomplete, reset the bag to the top and rerun it. The tool deliberately uses the proven two-click item-selection routine.
 
 ## Known limitations
 
 - Windows only
 - coordinate-based automation depends on stable window placement/scaling
 - assumes a 3-column x 4-row equipment capture grid
+- the validated calibration tolerance is centered on the 131 x 140 px layout; substantially different layouts are scaled from their measured pitch and should be tested before a full run
 - uses ShareX `Ctrl+Shift+Z`
-- physical mouse movement is locked during capture, but users should still avoid clicking or other keyboard input
-- resume requires the same Maple equipment category and scroll position to remain unchanged after safe stop
 - does not inspect screenshot contents while running
 - does not perform OCR or analyse equipment
 
@@ -298,3 +233,30 @@ The game may not have accepted an equipment selection before ShareX captured the
 MIT License.
 
 This is an unofficial community utility and is not affiliated with Nexon.
+
+## Position safety
+
+Calibration records the exact Maple window position and size used for the
+coordinate calibration. Before both a new F8 capture and an F9 resume, the
+Capture Tool compares the current Maple window geometry with those saved values.
+
+If Maple has moved or been resized, capture is blocked from blindly continuing.
+The warning can restore Maple to the saved calibrated position and then re-check
+the geometry before capture continues.
+
+`Position_Maple_For_Capture.ahk` provides the same restore action as a standalone
+helper and verifies the before/after geometry.
+
+Because capture is coordinate-based, do not manually move or resize Maple after
+calibration unless you restore it to the saved capture position or recalibrate.
+
+## Current capture behaviour
+
+- ShareX post-capture wait remains **850 ms**.
+- Equipment-list movement remains the validated alternating **576 / 577 px**.
+- Physical mouse-movement lock remains enabled during capture.
+- The live capture/movement counter remains enabled.
+- `Esc` performs the safe-stop/checkpoint path.
+- `F9` resumes a saved checkpoint.
+- The first item after each movement uses the validated post-movement
+  settle/reclick sequence before ShareX capture.

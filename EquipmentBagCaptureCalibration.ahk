@@ -1,29 +1,10 @@
-#Requires AutoHotkey v2.0
+﻿#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 CoordMode "Mouse", "Screen"
 
 global APP_NAME := "Equipment Bag Capture Calibration"
 global CONFIG_FILE := A_ScriptDir . "\EquipmentBagCapture.ini"
-
-; Validated reference setup.
-global REFERENCE_SCREEN_WIDTH := 2560
-global REFERENCE_SCREEN_HEIGHT := 1440
-global REFERENCE_X_PITCH := 131
-global REFERENCE_Y_PITCH := 140
-global POPUP_CLOSE_DX := 382
-global POPUP_CLOSE_DY := -163
-global REFERENCE_SCROLL_SHORT := 576
-global REFERENCE_SCROLL_LONG := 577
-
-; Human-friendly tolerance for the validated 2560x1440 layout.
-; The Maple glove fingertip is several pixels wide, so two correct-looking
-; clicks can differ by several pixels in opposite directions. These ranges
-; intentionally absorb that hand-placement error instead of changing geometry.
-global X_PITCH_MIN := 123
-global X_PITCH_MAX := 139
-global Y_PITCH_MIN := 132
-global Y_PITCH_MAX := 148
 
 SetTimer(StartCalibration, -250)
 
@@ -33,131 +14,116 @@ StartCalibration()
 {
     global APP_NAME
     global CONFIG_FILE
-    global REFERENCE_SCREEN_WIDTH
-    global REFERENCE_SCREEN_HEIGHT
-    global REFERENCE_X_PITCH
-    global REFERENCE_Y_PITCH
-    global POPUP_CLOSE_DX
-    global POPUP_CLOSE_DY
-    global REFERENCE_SCROLL_SHORT
-    global REFERENCE_SCROLL_LONG
-    global X_PITCH_MIN
-    global X_PITCH_MAX
-    global Y_PITCH_MIN
-    global Y_PITCH_MAX
 
-    IntroPrompt()
-
-    topLeftRef := CaptureLvPoint(
-        "Grid reference 1 of 3",
-        "TOP-LEFT equipment item"
+    answer := MsgBox(
+        "This wizard records the screen positions used by the "
+        . "Equipment Bag Capture Tool.`n`n"
+        . "Before continuing:`n"
+        . "• Open the MapleStory: Idle RPG PC client.`n"
+        . "• Open Manage Equipment.`n"
+        . "• Select the equipment category you want to capture.`n"
+        . "• Put the equipment list at the absolute top.`n"
+        . "• Keep Maple in the position and size you will use later.`n`n"
+        . "For each point, move the mouse to the requested position "
+        . "and press F9.`n`n"
+        . "Press Esc at any time to cancel.",
+        APP_NAME,
+        "OKCancel Icon!"
     )
 
-    topMiddleRef := CaptureLvPoint(
-        "Grid reference 2 of 3",
-        "TOP-MIDDLE equipment item"
+    if answer != "OK"
+        ExitApp
+
+    topLeft := CapturePoint(
+        "Grid point 1 of 3",
+        "Place the mouse in the CENTRE of the top-left equipment item."
     )
 
-    secondRowLeftRef := CaptureLvPoint(
-        "Grid reference 3 of 3",
-        "LEFT equipment item in the SECOND ROW"
+    topMiddle := CapturePoint(
+        "Grid point 2 of 3",
+        "Place the mouse in the CENTRE of the top-middle equipment item."
     )
 
-    ; Average same-row / same-column observations before measuring pitch.
-    ; This reduces the effect of a single fat-finger placement error.
-    measuredCol1X := Round((topLeftRef[1] + secondRowLeftRef[1]) / 2)
-    measuredRow1Y := Round((topLeftRef[2] + topMiddleRef[2]) / 2)
+    secondRowLeft := CapturePoint(
+        "Grid point 3 of 3",
+        "Place the mouse in the CENTRE of the left equipment item "
+        . "in the second row."
+    )
 
-    rawXSpacing := topMiddleRef[1] - measuredCol1X
-    rawYSpacing := secondRowLeftRef[2] - measuredRow1Y
+    xSpacing := topMiddle[1] - topLeft[1]
+    ySpacing := secondRowLeft[2] - topLeft[2]
 
-    if rawXSpacing < 40 || rawYSpacing < 40
+    if xSpacing < 40 || ySpacing < 40
     {
         MsgBox(
             "The recorded grid spacing is too small.`n`n"
-            . "Run calibration again and place the glove fingertip "
-            . "on the requested Lv. dots.",
+            . "Run calibration again and select the centres of "
+            . "the requested equipment items.",
             APP_NAME
         )
         ExitApp
     }
 
-    xSpacing := rawXSpacing
-    ySpacing := rawYSpacing
-    xNormalized := false
-    yNormalized := false
+    gridX1 := topLeft[1]
+    gridX2 := topMiddle[1]
+    gridX3 := gridX2 + xSpacing
 
-    referenceScreen := (
-        A_ScreenWidth = REFERENCE_SCREEN_WIDTH
-        && A_ScreenHeight = REFERENCE_SCREEN_HEIGHT
+    gridY1 := topLeft[2]
+    gridY2 := secondRowLeft[2]
+    gridY3 := gridY2 + ySpacing
+    gridY4 := gridY3 + ySpacing
+
+    popupClose := CapturePoint(
+        "Equipment popup close button",
+        "First, manually click any equipment item so its details popup opens.`n`n"
+        . "Then place the mouse in the CENTRE of the popup's X close button."
     )
 
-    ; Use the validated geometry when the screen is the reference resolution
-    ; and the measured pitch is inside a deliberately generous human-error band.
-    if referenceScreen
-        && rawXSpacing >= X_PITCH_MIN
-        && rawXSpacing <= X_PITCH_MAX
+    dragStart := CapturePoint(
+        "Movement start point",
+        "First, manually close the equipment popup and make sure the list "
+        . "is still at the absolute top.`n`n"
+        . "Place the mouse at the point where an upward drag should START."
+    )
+
+    dragEnd := CapturePoint(
+        "Movement end point",
+        "Place the mouse at the point where the upward drag should END.`n`n"
+        . "Do not drag the list. Only position the pointer and press F9."
+    )
+
+    if dragEnd[2] >= dragStart[2]
     {
-        xSpacing := REFERENCE_X_PITCH
-        xNormalized := true
+        MsgBox(
+            "The drag endpoint must be above the drag start point.`n`n"
+            . "No configuration was saved. Run calibration again.",
+            APP_NAME
+        )
+        ExitApp
     }
 
-    if referenceScreen
-        && rawYSpacing >= Y_PITCH_MIN
-        && rawYSpacing <= Y_PITCH_MAX
+    ; Phase 12 position safety: record the exact Maple window geometry used
+    ; during calibration because the capture tool uses absolute screen coords.
+    mapleHwnd := WinExist("MapleIdleRPG")
+    if !mapleHwnd
     {
-        ySpacing := REFERENCE_Y_PITCH
-        yNormalized := true
+        MsgBox(
+            "MapleIdleRPG could not be found while saving calibration.`n`n"
+            . "Window position safety data was NOT saved.",
+            APP_NAME
+        )
+        ExitApp
     }
 
-    ; Rebuild consistent grid anchors from all three observations.
-    ; Each captured point votes for where row 1 / column 1 should be.
-    inferredX1FromMiddle := topMiddleRef[1] - xSpacing
-    gridX1 := Round((
-        topLeftRef[1]
-        + secondRowLeftRef[1]
-        + inferredX1FromMiddle
-    ) / 3)
-    gridX2 := gridX1 + xSpacing
-    gridX3 := gridX1 + (xSpacing * 2)
-
-    inferredY1FromSecondRow := secondRowLeftRef[2] - ySpacing
-    gridY1 := Round((
-        topLeftRef[2]
-        + topMiddleRef[2]
-        + inferredY1FromSecondRow
-    ) / 3)
-    gridY2 := gridY1 + ySpacing
-    gridY3 := gridY1 + (ySpacing * 2)
-    gridY4 := gridY1 + (ySpacing * 3)
-
-    PopupPrepPrompt()
-
-    popupLvRef := CaptureLvPoint(
-        "Popup reference",
-        "Lv. text INSIDE THE OPEN EQUIPMENT POPUP"
-    )
-
-    popupCloseX := popupLvRef[1] + Round(
-        POPUP_CLOSE_DX * xSpacing / REFERENCE_X_PITCH
-    )
-    popupCloseY := popupLvRef[2] + Round(
-        POPUP_CLOSE_DY * ySpacing / REFERENCE_Y_PITCH
-    )
-
-    dragStartX := gridX3
-    dragStartY := gridY4 + ySpacing
-
-    scrollShort := Round(
-        REFERENCE_SCROLL_SHORT * ySpacing / REFERENCE_Y_PITCH
-    )
-    scrollLong := Round(
-        REFERENCE_SCROLL_LONG * ySpacing / REFERENCE_Y_PITCH
-    )
-
+    WinGetPos &windowLeft, &windowTop, &windowWidth, &windowHeight,
+        "ahk_id " . mapleHwnd
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
     IniWrite(A_ScreenHeight, CONFIG_FILE, "General", "ScreenHeight")
+    IniWrite(windowLeft, CONFIG_FILE, "General", "WindowLeft")
+    IniWrite(windowTop, CONFIG_FILE, "General", "WindowTop")
+    IniWrite(windowWidth, CONFIG_FILE, "General", "WindowWidth")
+    IniWrite(windowHeight, CONFIG_FILE, "General", "WindowHeight")
 
     IniWrite(gridX1, CONFIG_FILE, "Grid", "X1")
     IniWrite(gridX2, CONFIG_FILE, "Grid", "X2")
@@ -166,212 +132,69 @@ StartCalibration()
     IniWrite(gridY2, CONFIG_FILE, "Grid", "Y2")
     IniWrite(gridY3, CONFIG_FILE, "Grid", "Y3")
     IniWrite(gridY4, CONFIG_FILE, "Grid", "Y4")
-    IniWrite(rawXSpacing, CONFIG_FILE, "Grid", "RawXSpacing")
-    IniWrite(rawYSpacing, CONFIG_FILE, "Grid", "RawYSpacing")
-    IniWrite(xSpacing, CONFIG_FILE, "Grid", "EffectiveXSpacing")
-    IniWrite(ySpacing, CONFIG_FILE, "Grid", "EffectiveYSpacing")
 
-    IniWrite(popupLvRef[1], CONFIG_FILE, "Popup", "LvRefX")
-    IniWrite(popupLvRef[2], CONFIG_FILE, "Popup", "LvRefY")
-    IniWrite(popupCloseX, CONFIG_FILE, "Popup", "CloseX")
-    IniWrite(popupCloseY, CONFIG_FILE, "Popup", "CloseY")
+    IniWrite(popupClose[1], CONFIG_FILE, "Popup", "CloseX")
+    IniWrite(popupClose[2], CONFIG_FILE, "Popup", "CloseY")
 
-    IniWrite(dragStartX, CONFIG_FILE, "Movement", "StartX")
-    IniWrite(dragStartY, CONFIG_FILE, "Movement", "StartY")
-    IniWrite(scrollShort, CONFIG_FILE, "Movement", "ShortDistance")
-    IniWrite(scrollLong, CONFIG_FILE, "Movement", "LongDistance")
+    IniWrite(dragStart[1], CONFIG_FILE, "Movement", "StartX")
+    IniWrite(dragStart[2], CONFIG_FILE, "Movement", "StartY")
+    IniWrite(dragEnd[1], CONFIG_FILE, "Movement", "EndX")
+    IniWrite(dragEnd[2], CONFIG_FILE, "Movement", "EndY")
     IniWrite(36, CONFIG_FILE, "Movement", "Steps")
     IniWrite(20, CONFIG_FILE, "Movement", "StepDelay")
     IniWrite(700, CONFIG_FILE, "Movement", "HoldDelay")
 
-    IniWrite(dragStartX, CONFIG_FILE, "Movement", "EndX")
-    IniWrite(dragStartY - scrollShort, CONFIG_FILE, "Movement", "EndY")
-
-    xNote := xNormalized
-        ? rawXSpacing . " px measured -> normalized to " . xSpacing . " px"
-        : rawXSpacing . " px measured -> used as measured"
-
-    yNote := yNormalized
-        ? rawYSpacing . " px measured -> normalized to " . ySpacing . " px"
-        : rawYSpacing . " px measured -> used as measured"
-
     summary := (
         "Calibration saved successfully.`n`n"
-        . "Horizontal pitch: " . xNote . "`n"
-        . "Vertical pitch: " . yNote . "`n`n"
-        . "Grid reference columns: "
+        . "Grid columns: "
         . gridX1 . ", " . gridX2 . ", " . gridX3 . "`n"
-        . "Grid reference rows: "
+        . "Grid rows: "
         . gridY1 . ", " . gridY2 . ", "
-        . gridY3 . ", " . gridY4 . "`n`n"
-        . "Popup Lv. reference: "
-        . popupLvRef[1] . ", " . popupLvRef[2] . "`n"
-        . "Calculated popup close: "
-        . popupCloseX . ", " . popupCloseY . "`n`n"
-        . "Calculated row-5 grab point: "
-        . dragStartX . ", " . dragStartY . "`n"
-        . "Alternating movement distances: "
-        . scrollShort . " / " . scrollLong . " px`n"
-        . "Average movement: "
-        . Round((scrollShort + scrollLong) / 2, 3) . " px`n`n"
+        . gridY3 . ", " . gridY4 . "`n"
+        . "Popup close: "
+        . popupClose[1] . ", " . popupClose[2] . "`n"
+        . "Drag: "
+        . dragStart[1] . ", " . dragStart[2]
+        . " to " . dragEnd[1] . ", " . dragEnd[2] . "`n`n"
         . "Configuration file:`n"
         . CONFIG_FILE . "`n`n"
-        . "Calibration points are averaged and small differences around the "
-        . "validated layout are normalized automatically to reduce human-placement error.`n`n"
-        . "Run EquipmentBagCaptureTool.ahk and perform a small multi-screen "
-        . "test before a full bag."
+        . "Run EquipmentBagCaptureTool.ahk and perform a 12-item test first."
     )
 
     A_Clipboard := summary
 
     MsgBox(
-        summary
-        . "`n`nThe summary has been copied to the clipboard."
-        . "`n`nPress Enter or click OK to close this calibration script.",
+        summary . "`n`nThe summary has been copied to the clipboard.",
         APP_NAME
     )
 
     ExitApp
 }
 
-IntroPrompt()
+CapturePoint(pointName, instructions)
 {
     global APP_NAME
 
-    introGui := Gui("+AlwaysOnTop", APP_NAME)
-    introGui.SetFont("s11", "Segoe UI")
-    introGui.AddText(
-        "w560 Center",
-        "Use the TIP OF THE MAPLE GLOVE FINGER on the DOT in"
-    )
-    introGui.SetFont("s30 Bold", "Segoe UI")
-    introGui.AddText("w560 Center y+2", "Lv.")
-    introGui.SetFont("s10", "Segoe UI")
-    introGui.AddText(
-        "w560 y+12",
-        "Before continuing:`n"
-        . "• Open MapleStory: Idle RPG.`n"
-        . "• Open Preset → Chapter → Chapter Hunt → Edit Preset.`n"
-        . "• Open the 3-column equipment bag.`n"
-        . "• Select a category with at least 6 items.`n"
-        . "• Put the equipment list at the absolute top.`n"
-        . "• Keep Maple in the exact position and size you will use later.`n`n"
-        . "You do NOT need to be pixel-perfect. Aim the glove fingertip at "
-        . "the Lv. dot as consistently as you comfortably can. The wizard "
-        . "averages the calibration points and absorbs normal hand-placement error.`n`n"
-        . "Press Enter or click Continue."
-    )
-
-    continueBtn := introGui.AddButton(
-        "Default w120 x220 y+12", "Continue"
-    )
-    continueBtn.OnEvent("Click", (*) => introGui.Destroy())
-    introGui.OnEvent("Close", (*) => ExitApp())
-
-    introGui.Show("AutoSize Center")
-    WinWaitClose("ahk_id " . introGui.Hwnd)
-}
-
-PopupPrepPrompt()
-{
-    global APP_NAME
-
-    prepGui := Gui("+AlwaysOnTop", APP_NAME . " - Popup reference")
-    prepGui.SetFont("s11", "Segoe UI")
-    prepGui.AddText(
-        "w540 Center",
-        "Open any equipment popup and LEAVE IT OPEN."
-    )
-    prepGui.AddText(
-        "w540 Center y+10",
-        "The next point is NOT the X close button."
-    )
-    prepGui.AddText(
-        "w540 Center y+10",
-        "Use the same glove-fingertip landmark on"
-    )
-    prepGui.SetFont("s28 Bold", "Segoe UI")
-    prepGui.AddText("w540 Center y+2", "Lv.")
-    prepGui.SetFont("s11", "Segoe UI")
-    prepGui.AddText(
-        "w540 Center y+6",
-        "inside the equipment popup."
-    )
-    prepGui.AddText(
-        "w540 Center y+10",
-        "Press Enter or click Continue."
-    )
-
-    continueBtn := prepGui.AddButton(
-        "Default w120 x210 y+14", "Continue"
-    )
-    continueBtn.OnEvent("Click", (*) => prepGui.Destroy())
-    prepGui.OnEvent("Close", (*) => ExitApp())
-
-    prepGui.Show("AutoSize Center")
-    WinWaitClose("ahk_id " . prepGui.Hwnd)
-}
-
-CaptureLvPoint(pointName, targetDescription)
-{
-    global APP_NAME
-
-    instructionGui := Gui(
-        "+AlwaysOnTop",
+    MsgBox(
+        instructions . "`n`n"
+        . "After closing this message, press F9 to record the point.",
         APP_NAME . " - " . pointName
     )
-    instructionGui.SetFont("s11", "Segoe UI")
-    instructionGui.AddText(
-        "w520 Center",
-        "Place the TIP OF THE GLOVE FINGER directly on the DOT in"
-    )
-    instructionGui.SetFont("s30 Bold", "Segoe UI")
-    instructionGui.AddText("w520 Center y+2", "Lv.")
-    instructionGui.SetFont("s11", "Segoe UI")
-    instructionGui.AddText(
-        "w520 Center y+8",
-        targetDescription
-    )
-    instructionGui.AddText(
-        "w520 Center y+14",
-        "Press Enter or click Continue to close this window."
-    )
-    instructionGui.AddText(
-        "w520 Center y+6",
-        "Then move the glove into position and press T."
-    )
-    instructionGui.AddText(
-        "w520 Center y+6",
-        "Close enough is fine; the calibration averages normal hand wobble."
-    )
-    instructionGui.AddText(
-        "w520 Center y+6",
-        "Press Esc to cancel."
-    )
-
-    continueBtn := instructionGui.AddButton(
-        "Default w120 x200 y+14", "Continue"
-    )
-    continueBtn.OnEvent("Click", (*) => instructionGui.Destroy())
-    instructionGui.OnEvent("Close", (*) => ExitApp())
-
-    instructionGui.Show("AutoSize Center")
-    WinWaitClose("ahk_id " . instructionGui.Hwnd)
 
     ToolTip(
         pointName . "`n"
-        . targetDescription . "`n"
-        . "Put the glove fingertip on the Lv. dot and press T.",
+        . "Move the pointer into position and press F9.`n"
+        . "Press Esc to cancel.",
         20,
         20
     )
 
-    KeyWait "t"
-    KeyWait "t", "D"
+    KeyWait "F9"
+    KeyWait "F9", "D"
 
     MouseGetPos &pointX, &pointY
 
-    KeyWait "t"
+    KeyWait "F9"
     ToolTip
 
     Sleep 200

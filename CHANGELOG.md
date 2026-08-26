@@ -1,26 +1,4 @@
-# Changelog
-
-## v1.0.2 — 2026-08-24
-
-Faster capture, safer unattended runs and resumable safe stops.
-
-- Reduced the ShareX post-capture wait from **1400 ms to 850 ms** while preserving the proven two-click item-selection and scrolling behaviour.
-- Added a physical mouse-movement lock during capture so accidental mouse movement cannot pull the pointer away from the scripted coordinates.
-- Added a live top-left capture/movement counter.
-- Added a safe `Esc` stop path that unlocks the mouse and reports completed screenshots, completed movements and the next item number.
-- Safe stops now save `EquipmentBagCaptureCheckpoint.ini` locally before the script exits.
-- Added **F9 resume**: restart the same script without moving or scrolling the equipment bag, press `F9`, and the tool resumes from the saved next-item checkpoint.
-- Resume automatically handles an equipment popup left open at the checkpoint.
-- A completed resumed run clears the saved checkpoint automatically.
-- Starting a new `F8` capture while a checkpoint exists asks before deleting the saved checkpoint.
-- `EquipmentBagCaptureCheckpoint.ini` is excluded from Git alongside the local calibration INI.
-- Keeps the validated human-tolerant `Lv.` calibration and alternating **576 / 577 px** scrolling unchanged.
-- Validated the faster **850 ms** timing with a **242-item** run completing **242 screenshot commands and 20 movements**.
-- Validated **850 ms + mouse-movement lock** with a **201-item** run completing **201 screenshot commands and 16 movements**.
-- Verified that 201-item run at file level: **201 PNG files saved and 0 duplicate CRC32 groups**.
-- Validated persistent resume with a real mid-screen stop: stopped after item **19**, saved next item **20**, closed/reopened the script, resumed with `F9`, and completed **36/36 screenshots and 2/2 movements**.
-- File-level verification of the combined stop/resume test found **36 PNG files and 0 duplicate CRC32 groups**.
-- Added optional `Check_Screenshot_Folder_CRC.bat` for post-run file-count and CRC32 duplicate checking.
+﻿# Changelog
 
 ## v1.0.1 — 2026-08-18
 
@@ -35,7 +13,6 @@ Calibration, scrolling and usability improvements.
 - Added a live capture progress counter showing captured items and movement progress.
 - Preserves the proven two-click equipment selection, ShareX capture and held stepped-drag behaviour.
 - Validated with a 36-item multi-screen test and a 134-item full capture requiring 11 movements.
-- Subsequently stress-tested with a **300+ item full equipment bag** to validate long-run scrolling and cumulative-drift behaviour.
 - Improved handling and documentation for incomplete final screens and bottom-of-list bounce-back behaviour.
 - Updated README calibration and testing instructions.
 

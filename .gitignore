@@ -1,3 +1,9 @@
-EquipmentBagCapture.ini
-EquipmentBagCaptureCheckpoint.ini
+﻿EquipmentBagCapture.ini
 *.log
+EquipmentBagCaptureCheckpoint.ini
+_Archive/
+Screenshot_Check_Report_CRC.txt
+*.png
+*.jpg
+*.jpeg
+EquipmentBagCaptureTool_v*.zip

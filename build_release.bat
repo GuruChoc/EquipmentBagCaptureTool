@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableExtensions
 
 cd /d "%~dp0"
@@ -19,6 +19,7 @@ mkdir "%STAGE%" || exit /b 1
 for %%F in (
     EquipmentBagCaptureTool.ahk
     EquipmentBagCaptureCalibration.ahk
+    Position_Maple_For_Capture.ahk
     Check_Screenshot_Folder_CRC.bat
     README.md
     CHANGELOG.md
@@ -52,7 +53,6 @@ echo.
 echo Release package created successfully:
 echo %CD%\%ZIP%
 echo.
-echo EquipmentBagCapture.ini is intentionally NOT included.
-echo EquipmentBagCaptureCheckpoint.ini is intentionally NOT included.
+echo Local calibration, checkpoint, logs and screenshots are intentionally NOT included.
 echo.
 pause

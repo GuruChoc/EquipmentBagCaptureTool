@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 CoordMode "Mouse", "Screen"
@@ -118,11 +118,11 @@ StartCalibration()
     WinGetPos &windowLeft, &windowTop, &windowWidth, &windowHeight,
         "ahk_id " . mapleHwnd
 
-    ; AutoHotkey v2 creates a missing INI as UTF-16 with a BOM. Recreate the
-    ; calibration file here so an older ANSI copy is normalized automatically.
-    if FileExist(CONFIG_FILE)
-        FileDelete(CONFIG_FILE)
-
+    ; DPI/scaling safety: record the DPI used for these absolute coordinates.
+    ; Do not mathematically rescale the proven calibration later.
+    windowDpi := DllCall("user32\GetDpiForWindow", "Ptr", mapleHwnd, "UInt")
+    if !windowDpi
+        windowDpi := 96
     IniWrite("MapleIdleRPG", CONFIG_FILE, "General", "WindowTitle")
     IniWrite(A_ScreenWidth, CONFIG_FILE, "General", "ScreenWidth")
     IniWrite(A_ScreenHeight, CONFIG_FILE, "General", "ScreenHeight")
@@ -131,6 +131,7 @@ StartCalibration()
     IniWrite(windowWidth, CONFIG_FILE, "General", "WindowWidth")
     IniWrite(windowHeight, CONFIG_FILE, "General", "WindowHeight")
 
+    IniWrite(windowDpi, CONFIG_FILE, "General", "WindowDPI")
     IniWrite(gridX1, CONFIG_FILE, "Grid", "X1")
     IniWrite(gridX2, CONFIG_FILE, "Grid", "X2")
     IniWrite(gridX3, CONFIG_FILE, "Grid", "X3")

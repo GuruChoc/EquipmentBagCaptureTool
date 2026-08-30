@@ -319,3 +319,11 @@ If Maple has moved or been resized, capture is blocked from blindly continuing. 
 - `Esc` performs the safe-stop/checkpoint path.
 - `F9` resumes a saved checkpoint.
 - The first item after each movement uses the validated post-movement settle/reclick sequence before ShareX capture.
+
+
+## Display scaling / DPI safety
+
+Calibration records the Maple window DPI used for the saved absolute screen
+coordinates. Capture is blocked if Windows display scaling/DPI later differs
+from calibration. The tool deliberately does not mathematically rescale the
+tested coordinates; recalibrate after changing display scaling.

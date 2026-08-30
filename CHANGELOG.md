@@ -1,3 +1,10 @@
+## v1.0.4 - 2026-08-30
+
+- Record Maple window DPI during calibration.
+- Block capture when Windows display scaling/DPI differs from calibration.
+- Keep calibrated absolute coordinates unchanged; no auto-scaling.
+- Preserve tested 576/577 px movement and 850 ms ShareX post-capture delay.
+
 # Changelog
 
 ## v1.0.3 — 2026-08-26

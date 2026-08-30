@@ -1,4 +1,4 @@
-﻿name: Publish VERSION release
+name: Publish VERSION release
 
 on:
   push:
@@ -82,6 +82,7 @@ jobs:
           - F9 resume
           - post-movement first-item settle/reclick recovery
           - calibrated Maple window position/size safety check
+          - calibrated display DPI/scaling safety check
           - automatic and standalone Maple reposition helper
           - screenshot CRC32 validation helper
 

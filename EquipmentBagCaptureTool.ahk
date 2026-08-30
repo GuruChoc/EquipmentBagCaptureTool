@@ -1,4 +1,4 @@
-﻿#Requires AutoHotkey v2.0
+#Requires AutoHotkey v2.0
 #SingleInstance Force
 
 SetTitleMatchMode 2
@@ -36,6 +36,7 @@ global CALIBRATED_WINDOW_TOP := ""
 global CALIBRATED_WINDOW_WIDTH := ""
 global CALIBRATED_WINDOW_HEIGHT := ""
 
+global CALIBRATED_WINDOW_DPI := ""
 global RequestedItems := 0
 global ExpectedMovements := 0
 global CompletedScreenshots := 0
@@ -510,6 +511,7 @@ PrepareEnvironment()
     global MapleHwnd
     global CALIBRATED_SCREEN_WIDTH
     global CALIBRATED_SCREEN_HEIGHT
+    global CALIBRATED_WINDOW_DPI
 
     if !FileExist(CONFIG_FILE)
     {
@@ -574,6 +576,38 @@ PrepareEnvironment()
         return false
     }
 
+    ; DPI/scaling safety gate. Keep the same display scaling used during
+    ; calibration rather than trying to scale the absolute coordinates.
+    currentDpi := DllCall("user32\GetDpiForWindow", "Ptr", MapleHwnd, "UInt")
+    if !currentDpi
+        currentDpi := 96
+
+    if CALIBRATED_WINDOW_DPI = ""
+    {
+        MsgBox(
+            "CAPTURE BLOCKED - DPI/SCALING NOT RECORDED.`n`n"
+            . "Run EquipmentBagCaptureCalibration.ahk once at the display "
+            . "scaling you intend to use for capture.",
+            APP_NAME,
+            "Iconx"
+        )
+        return false
+    }
+
+    if currentDpi != (CALIBRATED_WINDOW_DPI + 0)
+    {
+        MsgBox(
+            "CAPTURE BLOCKED - DISPLAY SCALING CHANGED.`n`n"
+            . "Calibrated DPI: " . CALIBRATED_WINDOW_DPI . "`n"
+            . "Current DPI: " . currentDpi . "`n`n"
+            . "Restore the display scaling used during calibration or "
+            . "run calibration again.`n`n"
+            . "Coordinates are deliberately NOT auto-scaled.",
+            APP_NAME,
+            "Iconx"
+        )
+        return false
+    }
     ; Phase 12 safety gate: absolute click calibration is only safe when
     ; Maple is at the same position and size used during calibration.
     if !ValidateMapleWindowPosition()
@@ -591,6 +625,7 @@ ValidateMapleWindowPosition()
     global CALIBRATED_WINDOW_TOP
     global CALIBRATED_WINDOW_WIDTH
     global CALIBRATED_WINDOW_HEIGHT
+    global CALIBRATED_WINDOW_DPI
 
     if (
         CALIBRATED_WINDOW_LEFT = ""
@@ -755,6 +790,7 @@ LoadConfiguration()
     CALIBRATED_WINDOW_WIDTH := IniRead(CONFIG_FILE, "General", "WindowWidth", "")
     CALIBRATED_WINDOW_HEIGHT := IniRead(CONFIG_FILE, "General", "WindowHeight", "")
 
+    CALIBRATED_WINDOW_DPI := IniRead(CONFIG_FILE, "General", "WindowDPI", "")
     GRID_X := [
         IniRead(CONFIG_FILE, "Grid", "X1") + 0,
         IniRead(CONFIG_FILE, "Grid", "X2") + 0,

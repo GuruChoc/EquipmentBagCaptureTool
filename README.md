@@ -1,6 +1,6 @@
 # Equipment Bag Capture Tool
 
-**Current release: v1.0.3**
+**Current release: v1.0.4**
 
 Equipment Bag Capture Tool automates screenshot capture of equipment detail popups in the MapleStory: Idle RPG PC client using AutoHotkey v2 and ShareX.
 
@@ -319,7 +319,6 @@ If Maple has moved or been resized, capture is blocked from blindly continuing. 
 - `Esc` performs the safe-stop/checkpoint path.
 - `F9` resumes a saved checkpoint.
 - The first item after each movement uses the validated post-movement settle/reclick sequence before ShareX capture.
-
 
 ## Display scaling / DPI safety
 
